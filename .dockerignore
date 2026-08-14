@@ -1,0 +1,7 @@
+build
+.gradle
+.git
+.idea
+*.md
+backdata
+application-local.yaml
