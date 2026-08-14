@@ -1,0 +1,1 @@
+ALTER TABLE `interaction_log` MODIFY COLUMN `interaction_id` BIGINT NOT NULL AUTO_INCREMENT;
