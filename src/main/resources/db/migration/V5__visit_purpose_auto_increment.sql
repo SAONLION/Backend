@@ -1,0 +1,1 @@
+ALTER TABLE `visit_purpose` MODIFY COLUMN `purpose_id` BIGINT NOT NULL AUTO_INCREMENT;
