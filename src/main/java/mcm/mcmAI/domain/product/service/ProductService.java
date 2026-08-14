@@ -19,6 +19,7 @@ import mcm.mcmAI.domain.product.type.HubOptionProvider;
 import mcm.mcmAI.domain.product.type.InterestType;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.sku.repository.SkuRepository;
+import mcm.mcmAI.domain.tagscanlog.service.TagScanLogService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final SkuRepository skuRepository;
     private final ProductImageRepository productImageRepository;
+    private final TagScanLogService tagScanLogService;
 
     @Transactional
     public ProductResponseDTO create(ProductCreateRequestDTO request) {
@@ -65,7 +67,8 @@ public class ProductService {
         productRepository.delete(findProduct(productId));
     }
 
-    public ProductTagScanResponseDTO getProductByTag(Long tagId) {
+    @Transactional
+    public ProductTagScanResponseDTO getProductByTag(Long tagId, String sessionId) {
         Sku sku = skuRepository.findById(tagId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "태그에 해당하는 SKU를 찾을 수 없습니다: " + tagId));
@@ -77,6 +80,8 @@ public class ProductService {
                 .orElse(null);
 
         List<HubOptionDTO> hubOptions = HubOptionProvider.firstLevelOptions();
+
+        tagScanLogService.recordScan(sessionId, sku);
 
         return ProductTagScanResponseDTO.of(ProductSummaryDTO.of(product, imageUrl), hubOptions);
     }

@@ -25,14 +25,17 @@ public class ProductController {
     @Operation(
             summary = "태그 스캔",
             description = "NFC/QR 태그(SKU) 스캔 시 상품 정보와 1차 허브 옵션 4종(PRODUCT_UNDERSTANDING, FIT_PREFERENCE, "
-                    + "PURCHASE_CONDITION, OTHER)을 반환한다."
+                    + "PURCHASE_CONDITION, OTHER)을 반환한다. 스캔 시점에 tag_scan_log에 세션 기준 스캔 기록을 남긴다."
     )
     @GetMapping("/tags/{tagId}")
     public ProductTagScanResponseDTO scanTag(
             @Parameter(description = "스캔된 태그(SKU) ID", example = "1")
-            @PathVariable Long tagId
+            @PathVariable Long tagId,
+
+            @Parameter(description = "스캔을 수행한 세션 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+            @RequestParam String sessionId
     ) {
-        return productService.getProductByTag(tagId);
+        return productService.getProductByTag(tagId, sessionId);
     }
 
     @Operation(
