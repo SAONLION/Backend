@@ -11,9 +11,9 @@ CREATE TABLE `session` (
 );
 
 CREATE TABLE `product` (
-                           `product_id`	BIGINT	NOT NULL,
-                           `name`	VARCHAR(100)	NULL,
-                           `category`	VARCHAR(50)	NULL,
+                           `product_id`	BIGINT	NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                           `name`	VARCHAR(100)	NOT NULL,
+                           `category`	VARCHAR(50)	NOT NULL,
                            `material_desc`	TEXT	NULL,
                            `heritage_desc`	TEXT	NULL,
                            `created_at`	DATETIME	NULL,
@@ -126,9 +126,7 @@ ALTER TABLE `session` ADD CONSTRAINT `PK_SESSION` PRIMARY KEY (
                                                                `session_id`
     );
 
-ALTER TABLE `product` ADD CONSTRAINT `PK_PRODUCT` PRIMARY KEY (
-                                                               `product_id`
-    );
+
 
 ALTER TABLE `product_translation` ADD CONSTRAINT `PK_PRODUCT_TRANSLATION` PRIMARY KEY (
                                                                                        `id`
