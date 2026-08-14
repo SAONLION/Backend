@@ -1,13 +1,17 @@
-package mcm.mcmAI.domain.product.entity;
+package mcm.mcmAI.domain.sku.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.global.entity.BaseEntity;
 
 @Getter
@@ -20,8 +24,9 @@ public class Sku extends BaseEntity {
     @Column(name = "sku")
     private Long sku;
 
-    @Column(name = "product_id")
-    private Long productId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    private Product product;
 
     @Column(name = "color", length = 30)
     private String color;
@@ -36,9 +41,9 @@ public class Sku extends BaseEntity {
     private Integer stockQty;
 
     @Builder
-    public Sku(Long sku, Long productId, String color, String size, Integer price, Integer stockQty) {
+    public Sku(Long sku, Product product, String color, String size, Integer price, Integer stockQty) {
         this.sku = sku;
-        this.productId = productId;
+        this.product = product;
         this.color = color;
         this.size = size;
         this.price = price;

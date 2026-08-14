@@ -13,12 +13,12 @@ import mcm.mcmAI.domain.product.dto.ProductUpdateRequestDTO;
 import mcm.mcmAI.domain.product.dto.SubOptionDTO;
 import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.product.entity.ProductImage;
-import mcm.mcmAI.domain.product.entity.Sku;
 import mcm.mcmAI.domain.product.repository.ProductImageRepository;
 import mcm.mcmAI.domain.product.repository.ProductRepository;
-import mcm.mcmAI.domain.product.repository.SkuRepository;
 import mcm.mcmAI.domain.product.type.HubOptionProvider;
 import mcm.mcmAI.domain.product.type.InterestType;
+import mcm.mcmAI.domain.sku.entity.Sku;
+import mcm.mcmAI.domain.sku.repository.SkuRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,7 +70,7 @@ public class ProductService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "태그에 해당하는 SKU를 찾을 수 없습니다: " + tagId));
 
-        Product product = findProduct(sku.getProductId());
+        Product product = findProduct(sku.getProduct().getProductId());
 
         String imageUrl = productImageRepository.findFirstBySkuOrderBySortOrderAsc(tagId)
                 .map(ProductImage::getImageUrl)
