@@ -1,0 +1,35 @@
+services:
+  app:
+    # [로컬] 직접 빌드해서 사용
+    build: .
+    # [EC2] 위 build 대신 아래 image로 교체 (ECR에서 pull, 나중에 필요하면)
+    # image: <계정ID>.dkr.ecr.ap-northeast-2.amazonaws.com/mcmai-app:latest
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    environment:
+      # DB_URL의 호스트는 아래 mysql 서비스 이름 그대로 사용 git
+      DB_URL: jdbc:mysql://mysql:3306/mcmai_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy   # mysql이 "준비 완료"된 뒤에 앱 시작
+    restart: on-failure:5
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: mcmai_service
+    volumes:
+      - mysql-data:/var/lib/mysql   # 데이터 영속 (컨테이너 지워도 안 날아감)
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: on-failure:5
+
+volumes:
+  mysql-data:
