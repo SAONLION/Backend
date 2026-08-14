@@ -2,6 +2,9 @@ spring:
   application:
     name: mcmAI
 
+  config:
+    import: optional:application-local.yaml
+
   datasource:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}

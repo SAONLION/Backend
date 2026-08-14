@@ -36,11 +36,15 @@ out/
 ### VS Code ###
 .vscode/
 
+# Local DB credentials (do not commit)
+application-local.yaml
+
 # OS
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+
 
 backdata/
