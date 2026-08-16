@@ -14,7 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "https://www.tagonai.site",   // 확정된 정식 도메인
                         "https://tagonai.site"        // www 없는 버전도 혹시 몰라
                 )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }

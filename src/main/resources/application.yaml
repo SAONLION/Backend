@@ -26,3 +26,7 @@ spring:
       web:
         exposure:
           include: health
+
+app:
+  internal-test-endpoints:
+    enabled: false
