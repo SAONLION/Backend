@@ -1,0 +1,28 @@
+package mcm.mcmAI.global.exception;
+
+import org.springframework.http.HttpStatus;
+
+public enum ErrorCode {
+
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 제품을 찾을 수 없습니다."),
+    OPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 옵션을 찾을 수 없습니다."),
+    SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."),
+    ACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 액션을 찾을 수 없습니다."),
+    INVALID_RESPONSE_KEY(HttpStatus.BAD_REQUEST, "허용되지 않은 응답 값입니다.");
+
+    private final HttpStatus status;
+    private final String message;
+
+    ErrorCode(HttpStatus status, String message) {
+        this.status = status;
+        this.message = message;
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}

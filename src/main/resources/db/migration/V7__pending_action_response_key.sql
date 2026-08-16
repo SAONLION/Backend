@@ -1,0 +1,1 @@
+ALTER TABLE `pending_action` ADD COLUMN `response_key` VARCHAR(50) NULL;

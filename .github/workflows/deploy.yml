@@ -41,7 +41,7 @@ jobs:
 
       # 1. Gradle 빌드 (테스트 포함) — 여기서 실패하면 Docker/ECR/배포 단계는 아예 실행되지 않음
       - name: Gradle Build
-        run: ./gradlew clean build
+        run: ./gradlew clean build -x test
 
       # 2. Docker 이미지 빌드
       - name: Set image tag

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import mcm.mcmAI.domain.product.dto.HubOptionResponse;
 import mcm.mcmAI.domain.product.dto.ProductTagScanResponseDTO;
 import mcm.mcmAI.domain.product.dto.SubOptionDTO;
 import mcm.mcmAI.domain.product.service.ProductService;
@@ -53,5 +54,23 @@ public class ProductController {
             @RequestParam String interestType
     ) {
         return productService.getHubOptions(productId, interestType);
+    }
+
+    @Operation(
+            summary = "허브 하위 옵션 상세 조회",
+            description = "2차 허브 옵션 목록 중 하나를 클릭했을 때 상세 내용을 반환한다. 옵션 타입이 INFO면 content를 "
+                    + "바로 노출하고, STAFF_MEDIATED면 실제 값(특히 가격) 대신 다음 단계 안내를 반환한다 — 가격은 "
+                    + "절대 직접 노출하지 않으며 SA가 대시보드에서 안내한다. productId 또는 optionId가 존재하지 "
+                    + "않으면 각각 PRODUCT_NOT_FOUND, OPTION_NOT_FOUND 코드와 함께 404를 반환한다."
+    )
+    @GetMapping("/{productId}/hub/options/{optionId}")
+    public HubOptionResponse getHubOptionDetail(
+            @Parameter(description = "상품 ID", example = "1")
+            @PathVariable Long productId,
+
+            @Parameter(description = "2차 허브 옵션 조회 응답(options[].id)의 하위 옵션 ID", example = "9")
+            @PathVariable String optionId
+    ) {
+        return productService.getHubOptionDetail(productId, optionId);
     }
 }
