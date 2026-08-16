@@ -13,6 +13,7 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       APP_INTERNAL_TEST_ENDPOINTS_ENABLED: ${APP_INTERNAL_TEST_ENDPOINTS_ENABLED}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       mysql:
         condition: service_healthy   # mysql이 "준비 완료"된 뒤에 앱 시작

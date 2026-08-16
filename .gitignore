@@ -38,6 +38,7 @@ out/
 
 # Local DB credentials (do not commit)
 application-local.yaml
+.env
 
 # OS
 .DS_Store

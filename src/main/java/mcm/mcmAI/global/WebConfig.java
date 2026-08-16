@@ -12,7 +12,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns(
                         "https://*.vercel.app",       // Vercel 프리뷰/변경 대응
                         "https://www.tagonai.site",   // 확정된 정식 도메인
-                        "https://tagonai.site"        // www 없는 버전도 혹시 몰라
+                        "https://tagonai.site",        // www 없는 버전도 혹시 몰라
+                        "http://localhost:5173"        // 로컬 프론트 개발 서버
                 )
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

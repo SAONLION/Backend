@@ -30,3 +30,8 @@ spring:
 app:
   internal-test-endpoints:
     enabled: false
+
+openai:
+  base-url: https://api.openai.com/v1
+  api-key: ${OPENAI_API_KEY:}
+  model: gpt-4o-mini
