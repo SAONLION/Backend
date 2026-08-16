@@ -1,5 +1,6 @@
 package mcm.mcmAI.domain.pendingaction.service;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.pendingaction.dto.PendingActionResponse;
 import mcm.mcmAI.domain.pendingaction.dto.RespondRequest;
@@ -9,7 +10,9 @@ import mcm.mcmAI.domain.pendingaction.entity.PendingAction;
 import mcm.mcmAI.domain.pendingaction.entity.PendingActionOption;
 import mcm.mcmAI.domain.pendingaction.repository.PendingActionRepository;
 import mcm.mcmAI.domain.pendingaction.type.ActionNextStep;
+import mcm.mcmAI.domain.pendingaction.type.BlockerType;
 import mcm.mcmAI.domain.pendingaction.type.PendingActionStatus;
+import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.global.exception.BusinessException;
@@ -61,6 +64,23 @@ public class PendingActionService {
         return pendingAction.findOption(responseKey)
                 .map(PendingActionOption::actionNextStep)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_RESPONSE_KEY));
+    }
+
+    @Transactional
+    public PendingAction createBlocker(
+            Session session, BlockerType blockerType, Product product,
+            String popupTitle, String popupBody, List<PendingActionOption> options
+    ) {
+        PendingAction pendingAction = PendingAction.builder()
+                .session(session)
+                .blockerType(blockerType)
+                .product(product)
+                .popupTitle(popupTitle)
+                .popupBody(popupBody)
+                .options(options)
+                .build();
+
+        return pendingActionRepository.save(pendingAction);
     }
 
     private Session findSession(String sessionId) {

@@ -13,7 +13,9 @@ public enum ErrorCode {
     MISSING_CONTACT_INFO(HttpStatus.BAD_REQUEST, "이메일을 작성해주세요."),
     MISSING_PRODUCT_ID(HttpStatus.BAD_REQUEST, "제품 ID를 입력해주세요."),
     CALL_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 호출을 찾을 수 없습니다."),
-    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "허용되지 않은 상태 값입니다.");
+    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "허용되지 않은 상태 값입니다."),
+    SKU_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 SKU를 찾을 수 없습니다."),
+    INVALID_PICKUP_METHOD(HttpStatus.BAD_REQUEST, "허용되지 않은 수령 방법입니다.");
 
     private final HttpStatus status;
     private final String message;

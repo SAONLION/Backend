@@ -3,14 +3,19 @@ package mcm.mcmAI.domain.product.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.product.dto.HubOptionResponse;
+import mcm.mcmAI.domain.product.dto.PickupCheckRequest;
+import mcm.mcmAI.domain.product.dto.PickupCheckResponse;
 import mcm.mcmAI.domain.product.dto.ProductTagScanResponseDTO;
 import mcm.mcmAI.domain.product.dto.SubOptionDTO;
 import mcm.mcmAI.domain.product.service.ProductService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -72,5 +77,32 @@ public class ProductController {
             @PathVariable String optionId
     ) {
         return productService.getHubOptionDetail(productId, optionId);
+    }
+
+    @Operation(
+            summary = "[비공식 스펙] 수령방법별 재고 확인",
+            description = "⚠️ 노션에 정식 문서가 없는 API로, 04/05/14번 문서와 89번 참고표(ProductFlowNextStep)를 "
+                    + "조합해 추론한 스펙이다 — 추후 프론트/기획 확정 시 조정될 수 있다. 가격 안내(opt_price) 등 "
+                    + "STAFF_MEDIATED 옵션에서 nextStep=SELECT_PICKUP_METHOD로 수령 방법을 고른 뒤 호출하는 "
+                    + "다음 단계로, 선택한 SKU의 재고를 확인한다. 실제 매장별 재고 시스템은 없어 SKU의 stockQty가 "
+                    + "0보다 크면 재고 있음으로 간주하는 단순 로직이다. 재고가 없으면 nextStep=BLOCKER_TRIGGERED와 "
+                    + "함께 CB1 Blocker 팝업(pending_action)을 자동 생성하며, 옵션은 respond API에 구현된 "
+                    + "check_other_store/recommend_alt 2종만 제공한다(귀국지 배송/홀딩요청은 이번 범위 밖). "
+                    + "세션이 존재하지 않으면 404(SESSION_NOT_FOUND), productId가 존재하지 않으면 "
+                    + "404(PRODUCT_NOT_FOUND), skuId가 해당 제품의 SKU가 아니면 404(SKU_NOT_FOUND), "
+                    + "pickupMethod가 4종(호텔로 배송/공항에서 수령/귀국지로 배송/매장에서 바로 수령) 중 하나가 "
+                    + "아니면 400(INVALID_PICKUP_METHOD)을 반환한다."
+    )
+    @PostMapping("/{productId}/pickup-check")
+    public PickupCheckResponse checkPickup(
+            @Parameter(description = "상품 ID", example = "1")
+            @PathVariable Long productId,
+
+            @Parameter(description = "세션 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+            @RequestParam String sessionId,
+
+            @Valid @RequestBody PickupCheckRequest request
+    ) {
+        return productService.checkPickup(productId, sessionId, request);
     }
 }
