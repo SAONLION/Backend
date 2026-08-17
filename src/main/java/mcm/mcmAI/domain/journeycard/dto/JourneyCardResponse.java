@@ -18,8 +18,12 @@ public record JourneyCardResponse(
         @Schema(description = "세션 코드 (세션 ID 앞 5자). 형식은 추후 변경될 수 있다.", example = "d0571")
         String sessionCode,
 
-        @Schema(description = "콜라주 이미지 목록 (모델샷 최대 1장 + 제품샷 최대 3장, 총 최대 4장). "
+        @Schema(description = "콜라주 이미지 목록 (관심도 상위 제품 순으로 최대 4장). "
                 + "태그 이력이 없으면 빈 배열이다.")
-        List<CollageImageResponse> collageImages
+        List<CollageImageResponse> collageImages,
+
+        @Schema(description = "콜라주 4장이 모두 채워졌는지 여부. 프론트가 '채워졌어요' 팝업 노출 여부를 판단할 때 사용한다.",
+                example = "true")
+        boolean isComplete
 ) {
 }

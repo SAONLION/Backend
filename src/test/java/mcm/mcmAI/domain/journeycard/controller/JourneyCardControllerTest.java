@@ -8,8 +8,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import mcm.mcmAI.domain.interactionlog.entity.InteractionLog;
+import mcm.mcmAI.domain.interactionlog.repository.InteractionLogRepository;
 import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.product.repository.ProductRepository;
+import mcm.mcmAI.domain.product.type.InterestType;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
@@ -53,6 +56,9 @@ class JourneyCardControllerTest {
     @Autowired
     private SkuImageRepository skuImageRepository;
 
+    @Autowired
+    private InteractionLogRepository interactionLogRepository;
+
     @Test
     void 세션이_존재하지_않으면_404와_SESSION_NOT_FOUND_코드를_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", "no-such-session"))
@@ -61,7 +67,7 @@ class JourneyCardControllerTest {
     }
 
     @Test
-    void 태그_이력이_없으면_빈_콜라주를_반환하고_기본_필드는_정상적으로_채워진다() throws Exception {
+    void 태그_이력이_없으면_빈_콜라주를_반환하고_isComplete는_false다() throws Exception {
         Session session = newSession("mingyu");
 
         mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", session.getSessionId()))
@@ -71,65 +77,72 @@ class JourneyCardControllerTest {
                 .andExpect(jsonPath("$.nickname").value("mingyu"))
                 .andExpect(jsonPath("$.sessionCode").value(session.getSessionId().substring(0, 5)))
                 .andExpect(jsonPath("$.collageImages").isArray())
-                .andExpect(jsonPath("$.collageImages").isEmpty());
+                .andExpect(jsonPath("$.collageImages").isEmpty())
+                .andExpect(jsonPath("$.isComplete").value(false));
     }
 
     @Test
-    void 태그한_제품에_모델샷이_있으면_모델샷_1장과_제품샷_3장으로_채운다() throws Exception {
+    void 관심도_점수가_높은_제품_순으로_콜라주가_구성된다() throws Exception {
         Session session = newSession("mingyu");
-        String styleNumber = newStyleNumber();
-        Product product = newProduct();
-        Sku sku = newSku(product, styleNumber);
-        recordScan(session, sku, 1);
 
-        String model1 = newSkuImage(styleNumber, 1, ShotType.MODEL);
-        newSkuImage(styleNumber, 2, ShotType.MODEL);
-        String product1 = newSkuImage(styleNumber, 3, ShotType.PRODUCT);
-        String product2 = newSkuImage(styleNumber, 4, ShotType.PRODUCT);
-        String product3 = newSkuImage(styleNumber, 5, ShotType.PRODUCT);
+        // 태그 순서는 A -> B -> C 지만, 관심도 점수는 C > B > A가 되도록 구성한다.
+        String styleA = newStyleNumber();
+        Sku skuA = newSku(newProduct(), styleA);
+        recordScan(session, skuA, 1);
+        String imageA = newSkuImage(styleA, 1, ShotType.PRODUCT);
+
+        String styleB = newStyleNumber();
+        Sku skuB = newSku(newProduct(), styleB);
+        recordScan(session, skuB, 2);
+        String imageB = newSkuImage(styleB, 1, ShotType.PRODUCT);
+        recordInteraction(session, skuB, 10);
+
+        String styleC = newStyleNumber();
+        Sku skuC = newSku(newProduct(), styleC);
+        recordScan(session, skuC, 3);
+        String imageC = newSkuImage(styleC, 1, ShotType.PRODUCT);
+        recordInteraction(session, skuC, 100);
 
         mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.collageImages.length()").value(4))
-                .andExpect(jsonPath("$.collageImages[0].imageUrl").value(model1))
-                .andExpect(jsonPath("$.collageImages[0].shotType").value("MODEL"))
-                .andExpect(jsonPath("$.collageImages[1].imageUrl").value(product1))
-                .andExpect(jsonPath("$.collageImages[1].shotType").value("PRODUCT"))
-                .andExpect(jsonPath("$.collageImages[2].imageUrl").value(product2))
-                .andExpect(jsonPath("$.collageImages[3].imageUrl").value(product3));
+                .andExpect(jsonPath("$.collageImages.length()").value(3))
+                .andExpect(jsonPath("$.collageImages[0].imageUrl").value(imageC))
+                .andExpect(jsonPath("$.collageImages[1].imageUrl").value(imageB))
+                .andExpect(jsonPath("$.collageImages[2].imageUrl").value(imageA))
+                .andExpect(jsonPath("$.isComplete").value(false));
     }
 
     @Test
-    void 태그한_제품에_모델샷이_없으면_제품샷만으로_채운다() throws Exception {
+    void interaction_기록이_있는_제품이_먼저_태그했지만_기록이_없는_제품보다_높은_순위를_가진다() throws Exception {
         Session session = newSession("mingyu");
-        String styleNumber = newStyleNumber();
-        Product product = newProduct();
-        Sku sku = newSku(product, styleNumber);
-        recordScan(session, sku, 1);
 
-        for (int position = 1; position <= 5; position++) {
-            newSkuImage(styleNumber, position, ShotType.PRODUCT);
-        }
+        String styleTaggedFirst = newStyleNumber();
+        Sku skuTaggedFirst = newSku(newProduct(), styleTaggedFirst);
+        recordScan(session, skuTaggedFirst, 1);
+        String imageTaggedFirst = newSkuImage(styleTaggedFirst, 1, ShotType.PRODUCT);
+
+        String styleTaggedSecond = newStyleNumber();
+        Sku skuTaggedSecond = newSku(newProduct(), styleTaggedSecond);
+        recordScan(session, skuTaggedSecond, 2);
+        String imageTaggedSecond = newSkuImage(styleTaggedSecond, 1, ShotType.PRODUCT);
+        recordInteraction(session, skuTaggedSecond, 5);
+        recordInteraction(session, skuTaggedSecond, 5);
 
         mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.collageImages.length()").value(4))
-                .andExpect(jsonPath("$.collageImages[0].shotType").value("PRODUCT"))
-                .andExpect(jsonPath("$.collageImages[1].shotType").value("PRODUCT"))
-                .andExpect(jsonPath("$.collageImages[2].shotType").value("PRODUCT"))
-                .andExpect(jsonPath("$.collageImages[3].shotType").value("PRODUCT"));
+                .andExpect(jsonPath("$.collageImages.length()").value(2))
+                .andExpect(jsonPath("$.collageImages[0].imageUrl").value(imageTaggedSecond))
+                .andExpect(jsonPath("$.collageImages[1].imageUrl").value(imageTaggedFirst));
     }
 
     @Test
-    void 여러_제품을_태그하면_한_제품에_몰리지_않고_골고루_섞인다() throws Exception {
+    void 태그한_제품이_4개_미만이면_있는_만큼만_채우고_isComplete는_false다() throws Exception {
         Session session = newSession("mingyu");
 
         String styleA = newStyleNumber();
         Sku skuA = newSku(newProduct(), styleA);
         recordScan(session, skuA, 1);
-        for (int position = 1; position <= 3; position++) {
-            newSkuImage(styleA, position, ShotType.PRODUCT);
-        }
+        newSkuImage(styleA, 1, ShotType.PRODUCT);
 
         String styleB = newStyleNumber();
         Sku skuB = newSku(newProduct(), styleB);
@@ -138,11 +151,54 @@ class JourneyCardControllerTest {
 
         mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.collageImages.length()").value(2))
+                .andExpect(jsonPath("$.isComplete").value(false));
+    }
+
+    @Test
+    void 관심도_상위_4개_제품의_이미지로_4장이_채워지면_isComplete는_true다() throws Exception {
+        Session session = newSession("mingyu");
+
+        // 1위: 정면샷(position 가장 앞선 PRODUCT)
+        String style1st = newStyleNumber();
+        Sku sku1st = newSku(newProduct(), style1st);
+        recordScan(session, sku1st, 4);
+        String frontShot = newSkuImage(style1st, 1, ShotType.PRODUCT);
+        newSkuImage(style1st, 2, ShotType.PRODUCT);
+        recordInteraction(session, sku1st, 100);
+
+        // 2위: 다른 각도샷(position 두 번째로 앞선 PRODUCT)
+        String style2nd = newStyleNumber();
+        Sku sku2nd = newSku(newProduct(), style2nd);
+        recordScan(session, sku2nd, 3);
+        newSkuImage(style2nd, 1, ShotType.PRODUCT);
+        String alternateShot = newSkuImage(style2nd, 2, ShotType.PRODUCT);
+        recordInteraction(session, sku2nd, 50);
+
+        // 3위: 모델샷 우선
+        String style3rd = newStyleNumber();
+        Sku sku3rd = newSku(newProduct(), style3rd);
+        recordScan(session, sku3rd, 2);
+        String modelShot = newSkuImage(style3rd, 1, ShotType.MODEL);
+        newSkuImage(style3rd, 2, ShotType.PRODUCT);
+        recordInteraction(session, sku3rd, 10);
+
+        // 4위: 컨셉샷 슬롯(현재는 4위 제품 이미지로 대체)
+        String style4th = newStyleNumber();
+        Sku sku4th = newSku(newProduct(), style4th);
+        recordScan(session, sku4th, 1);
+        String conceptSlotShot = newSkuImage(style4th, 1, ShotType.PRODUCT);
+
+        mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.collageImages.length()").value(4))
-                // 라운드로빈: A 1장, B 1장, A 1장, A 1장 순으로 채워져 B의 유일한 이미지가 두 번째로 뽑힌다
-                .andExpect(jsonPath("$.collageImages[1].imageUrl")
-                        .value(skuImageRepository.findByStyleNumberIn(java.util.List.of(styleB)).get(0)
-                                .getImageUrl()));
+                .andExpect(jsonPath("$.collageImages[0].imageUrl").value(frontShot))
+                .andExpect(jsonPath("$.collageImages[0].shotType").value("PRODUCT"))
+                .andExpect(jsonPath("$.collageImages[1].imageUrl").value(alternateShot))
+                .andExpect(jsonPath("$.collageImages[2].imageUrl").value(modelShot))
+                .andExpect(jsonPath("$.collageImages[2].shotType").value("MODEL"))
+                .andExpect(jsonPath("$.collageImages[3].imageUrl").value(conceptSlotShot))
+                .andExpect(jsonPath("$.isComplete").value(true));
     }
 
     @Test
@@ -197,6 +253,15 @@ class JourneyCardControllerTest {
                 .sku(sku)
                 .scanOrder(scanOrder)
                 .scannedAt(LocalDateTime.now())
+                .build());
+    }
+
+    private void recordInteraction(Session session, Sku sku, int durationSeconds) {
+        interactionLogRepository.save(InteractionLog.builder()
+                .session(session)
+                .sku(sku)
+                .interestType(InterestType.PRODUCT_UNDERSTANDING)
+                .durationSeconds(durationSeconds)
                 .build());
     }
 
