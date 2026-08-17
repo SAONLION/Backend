@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    @Value("${app.api.server-url:}")
+    @Value("${app.api.server-url}")
     private String serverUrl;
 
     @Bean
