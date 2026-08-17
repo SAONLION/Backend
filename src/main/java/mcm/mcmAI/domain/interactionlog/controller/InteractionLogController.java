@@ -25,6 +25,7 @@ public class InteractionLogController {
     @Operation(
             summary = "인터랙션 기록",
             description = "고객이 제품 상세 화면에서 허브 옵션(1차) 또는 세부 옵션(2차)을 클릭할 때마다 기록을 남긴다. "
+                    + "durationSeconds(탭 체류 시간, 초)는 선택 항목이며 없으면 null로 저장된다. "
                     + "세션이 존재하지 않거나 SKU가 존재하지 않으면 404, interestType이 유효하지 않으면 400을 반환한다."
     )
     @PostMapping

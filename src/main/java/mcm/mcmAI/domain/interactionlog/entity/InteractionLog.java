@@ -46,11 +46,17 @@ public class InteractionLog extends BaseEntity {
     @Column(name = "sub_option", length = 50)
     private String subOption;
 
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     @Builder
-    public InteractionLog(Session session, Sku sku, InterestType interestType, String subOption) {
+    public InteractionLog(
+            Session session, Sku sku, InterestType interestType, String subOption, Integer durationSeconds
+    ) {
         this.session = session;
         this.sku = sku;
         this.interestType = interestType;
         this.subOption = subOption;
+        this.durationSeconds = durationSeconds;
     }
 }

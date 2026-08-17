@@ -19,7 +19,10 @@ public record InteractionLogResponse(
         String interestType,
 
         @Schema(description = "2차 세부 옵션 코드", example = "MATERIAL")
-        String subOption
+        String subOption,
+
+        @Schema(description = "탭 체류 시간(초)", example = "12")
+        Integer durationSeconds
 ) {
 
     public static InteractionLogResponse from(InteractionLog interactionLog) {
@@ -28,7 +31,8 @@ public record InteractionLogResponse(
                 interactionLog.getSession().getSessionId(),
                 interactionLog.getSku().getSku(),
                 interactionLog.getInterestType().name(),
-                interactionLog.getSubOption()
+                interactionLog.getSubOption(),
+                interactionLog.getDurationSeconds()
         );
     }
 }

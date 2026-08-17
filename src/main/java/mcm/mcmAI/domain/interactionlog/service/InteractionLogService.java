@@ -41,6 +41,7 @@ public class InteractionLogService {
                 .sku(sku)
                 .interestType(interestType)
                 .subOption(request.subOption())
+                .durationSeconds(request.durationSeconds())
                 .build();
 
         return InteractionLogResponse.from(interactionLogRepository.save(interactionLog));
