@@ -1,0 +1,7 @@
+package mcm.mcmAI.domain.purchaseinquiry.repository;
+
+import mcm.mcmAI.domain.purchaseinquiry.entity.PurchaseInquiry;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface PurchaseInquiryRepository extends JpaRepository<PurchaseInquiry, Long> {
+}
