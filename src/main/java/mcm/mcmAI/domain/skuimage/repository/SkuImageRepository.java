@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SkuImageRepository extends JpaRepository<SkuImage, Long> {
 
     List<SkuImage> findByStyleNumberIn(List<String> styleNumbers);
+
+    List<SkuImage> findByStyleNumberOrderByPositionAsc(String styleNumber);
 }
