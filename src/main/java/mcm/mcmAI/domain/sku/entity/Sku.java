@@ -40,13 +40,20 @@ public class Sku extends BaseEntity {
     @Column(name = "stock_qty")
     private Integer stockQty;
 
+    @Column(name = "style_number", length = 20)
+    private String styleNumber;
+
     @Builder
-    public Sku(Long sku, Product product, String color, String size, Integer price, Integer stockQty) {
+    public Sku(
+            Long sku, Product product, String color, String size, Integer price, Integer stockQty,
+            String styleNumber
+    ) {
         this.sku = sku;
         this.product = product;
         this.color = color;
         this.size = size;
         this.price = price;
         this.stockQty = stockQty;
+        this.styleNumber = styleNumber;
     }
 }

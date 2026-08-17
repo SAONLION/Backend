@@ -30,6 +30,8 @@ spring:
 app:
   internal-test-endpoints:
     enabled: false
+  api:
+    server-url: https://api.tagonai.site
 
 openai:
   base-url: https://api.openai.com/v1

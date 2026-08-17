@@ -9,4 +9,6 @@ public interface TagScanLogRepository extends JpaRepository<TagScanLog, Long> {
     long countBySession_SessionId(String sessionId);
 
     List<TagScanLog> findBySession_SessionIdOrderByScanOrderDesc(String sessionId);
+
+    List<TagScanLog> findBySession_SessionIdOrderByScanOrderAsc(String sessionId);
 }
