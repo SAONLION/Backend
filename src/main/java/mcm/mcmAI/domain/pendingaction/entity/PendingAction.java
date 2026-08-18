@@ -22,6 +22,7 @@ import mcm.mcmAI.domain.pendingaction.type.BlockerType;
 import mcm.mcmAI.domain.pendingaction.type.PendingActionStatus;
 import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.session.entity.Session;
+import mcm.mcmAI.domain.staffcall.entity.StaffCall;
 import mcm.mcmAI.global.entity.BaseEntity;
 
 @Getter
@@ -47,6 +48,10 @@ public class PendingAction extends BaseEntity {
     @JoinColumn(name = "product_id")
     private Product product;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_call_id")
+    private StaffCall staffCall;
+
     @Column(name = "popup_title", length = 200, nullable = false)
     private String popupTitle;
 
@@ -66,12 +71,13 @@ public class PendingAction extends BaseEntity {
 
     @Builder
     public PendingAction(
-            Session session, BlockerType blockerType, Product product,
+            Session session, BlockerType blockerType, Product product, StaffCall staffCall,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
         this.session = session;
         this.blockerType = blockerType;
         this.product = product;
+        this.staffCall = staffCall;
         this.popupTitle = popupTitle;
         this.popupBody = popupBody;
         this.options = options;

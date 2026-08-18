@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.staffcall.dto.StaffCallResponse;
 import mcm.mcmAI.domain.staffcall.service.StaffCallService;
+import mcm.mcmAI.internal.dto.StaffCallTestRequestedAtRequest;
 import mcm.mcmAI.internal.dto.StaffCallTestStatusRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -38,5 +39,22 @@ public class InternalTestStaffCallController {
             @Valid @RequestBody StaffCallTestStatusRequest request
     ) {
         return staffCallService.changeStatusForTest(callId, request.status());
+    }
+
+    @Operation(
+            summary = "[테스트 전용] 직원 호출 요청 시각 강제 변경",
+            description = "CB3(직원 호출 후 5분 미응대 시 우선 호출 승격 팝업) 감지 로직을 시연/테스트하기 위해 "
+                    + "requestedAt을 과거 시각으로 강제 설정하는 임시 API. 정식 기능이 아니며 인증이 필요 없다. "
+                    + "app.internal-test-endpoints.enabled=true(기본값 false)일 때만 이 엔드포인트가 등록되며, "
+                    + "꺼져 있으면 404를 반환한다."
+    )
+    @PatchMapping("/{callId}/requested-at")
+    public StaffCallResponse changeRequestedAt(
+            @Parameter(description = "호출 ID", example = "1")
+            @PathVariable Long callId,
+
+            @Valid @RequestBody StaffCallTestRequestedAtRequest request
+    ) {
+        return staffCallService.changeRequestedAtForTest(callId, request.requestedAt());
     }
 }

@@ -81,15 +81,16 @@ class StaffCallControllerTest {
     }
 
     @Test
-    void productId가_없으면_400과_MISSING_PRODUCT_ID_코드를_반환한다() throws Exception {
+    void productId가_없어도_201로_정상_생성된다() throws Exception {
         Session session = newSession();
 
         mockMvc.perform(post("/api/v1/session/staff-calls")
                         .param("sessionId", session.getSessionId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"가격 문의\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MISSING_PRODUCT_ID"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("requested"))
+                .andExpect(jsonPath("$.requestedAt").exists());
     }
 
     @Test

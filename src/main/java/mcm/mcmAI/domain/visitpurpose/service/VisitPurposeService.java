@@ -10,10 +10,10 @@ import mcm.mcmAI.domain.visitpurpose.dto.VisitPurposeStatusResponse;
 import mcm.mcmAI.domain.visitpurpose.entity.VisitPurpose;
 import mcm.mcmAI.domain.visitpurpose.repository.VisitPurposeRepository;
 import mcm.mcmAI.domain.visitpurpose.type.PurposeType;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import mcm.mcmAI.global.exception.BusinessException;
+import mcm.mcmAI.global.exception.ErrorCode;
 
 @Service
 @RequiredArgsConstructor
@@ -54,7 +54,6 @@ public class VisitPurposeService {
 
     private Session findSession(String sessionId) {
         return sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
     }
 }

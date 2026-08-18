@@ -17,8 +17,6 @@ import mcm.mcmAI.domain.product.dto.ProductTagScanResponseDTO;
 import mcm.mcmAI.domain.product.dto.ProductUpdateRequestDTO;
 import mcm.mcmAI.domain.product.dto.SubOptionDTO;
 import mcm.mcmAI.domain.product.entity.Product;
-import mcm.mcmAI.domain.product.entity.ProductImage;
-import mcm.mcmAI.domain.product.repository.ProductImageRepository;
 import mcm.mcmAI.domain.product.repository.ProductRepository;
 import mcm.mcmAI.domain.product.type.HubOptionDetailProvider;
 import mcm.mcmAI.domain.product.type.HubOptionProvider;
@@ -28,6 +26,9 @@ import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.sku.repository.SkuRepository;
+import mcm.mcmAI.domain.skuimage.entity.SkuImage;
+import mcm.mcmAI.domain.skuimage.repository.SkuImageRepository;
+import mcm.mcmAI.domain.skuimage.type.ShotType;
 import mcm.mcmAI.domain.tagscanlog.service.TagScanLogService;
 import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
@@ -48,10 +49,12 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final SkuRepository skuRepository;
-    private final ProductImageRepository productImageRepository;
+    private final SkuImageRepository skuImageRepository;
     private final TagScanLogService tagScanLogService;
     private final SessionRepository sessionRepository;
     private final PendingActionService pendingActionService;
+
+
 
     @Transactional
     public ProductResponseDTO create(ProductCreateRequestDTO request) {
@@ -95,8 +98,9 @@ public class ProductService {
 
         Product product = findProduct(sku.getProduct().getProductId());
 
-        String imageUrl = productImageRepository.findFirstBySkuOrderBySortOrderAsc(tagId)
-                .map(ProductImage::getImageUrl)
+        String imageUrl = skuImageRepository
+                .findFirstByStyleNumberAndShotTypeOrderByPositionAsc(sku.getStyleNumber(), ShotType.PRODUCT)
+                .map(SkuImage::getImageUrl)
                 .orElse(null);
 
         List<HubOptionDTO> hubOptions = HubOptionProvider.firstLevelOptions();

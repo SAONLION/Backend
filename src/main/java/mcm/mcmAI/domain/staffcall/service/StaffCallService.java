@@ -1,5 +1,6 @@
 package mcm.mcmAI.domain.staffcall.service;
 
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.product.repository.ProductRepository;
@@ -57,6 +58,16 @@ public class StaffCallService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
 
         staffCall.changeStatus(StaffCallStatus.from(statusValue));
+
+        return StaffCallResponse.from(staffCall);
+    }
+
+    @Transactional
+    public StaffCallResponse changeRequestedAtForTest(Long callId, LocalDateTime requestedAt) {
+        StaffCall staffCall = staffCallRepository.findById(callId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
+
+        staffCall.changeRequestedAt(requestedAt);
 
         return StaffCallResponse.from(staffCall);
     }

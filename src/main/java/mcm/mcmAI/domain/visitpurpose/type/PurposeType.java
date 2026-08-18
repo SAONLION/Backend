@@ -1,8 +1,8 @@
 package mcm.mcmAI.domain.visitpurpose.type;
 
 import java.util.Arrays;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import mcm.mcmAI.global.exception.BusinessException;
+import mcm.mcmAI.global.exception.ErrorCode;
 
 public enum PurposeType {
 
@@ -25,7 +25,6 @@ public enum PurposeType {
         return Arrays.stream(values())
                 .filter(type -> type.name().equalsIgnoreCase(value))
                 .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "유효하지 않은 purposeType 입니다: " + value));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_PURPOSE));
     }
 }

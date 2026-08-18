@@ -62,4 +62,8 @@ public class StaffCall extends BaseEntity {
     public void changeStatus(StaffCallStatus status) {
         this.status = status;
     }
+
+    public void changeRequestedAt(LocalDateTime requestedAt) {
+        this.requestedAt = requestedAt;
+    }
 }
