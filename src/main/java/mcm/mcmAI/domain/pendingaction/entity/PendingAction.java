@@ -18,11 +18,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import mcm.mcmAI.domain.interactionlog.entity.InteractionLog;
 import mcm.mcmAI.domain.pendingaction.type.BlockerType;
 import mcm.mcmAI.domain.pendingaction.type.PendingActionStatus;
 import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.staffcall.entity.StaffCall;
+import mcm.mcmAI.domain.tagscanlog.entity.TagScanLog;
 import mcm.mcmAI.global.entity.BaseEntity;
 
 @Getter
@@ -52,6 +54,17 @@ public class PendingAction extends BaseEntity {
     @JoinColumn(name = "staff_call_id")
     private StaffCall staffCall;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trigger_tag_scan_log_id")
+    private TagScanLog triggerTagScanLog;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trigger_interaction_log_id")
+    private InteractionLog triggerInteractionLog;
+
+    @Column(name = "trigger_id", length = 20)
+    private String triggerId;
+
     @Column(name = "popup_title", length = 200, nullable = false)
     private String popupTitle;
 
@@ -72,12 +85,16 @@ public class PendingAction extends BaseEntity {
     @Builder
     public PendingAction(
             Session session, BlockerType blockerType, Product product, StaffCall staffCall,
+            TagScanLog triggerTagScanLog, InteractionLog triggerInteractionLog, String triggerId,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
         this.session = session;
         this.blockerType = blockerType;
         this.product = product;
         this.staffCall = staffCall;
+        this.triggerTagScanLog = triggerTagScanLog;
+        this.triggerInteractionLog = triggerInteractionLog;
+        this.triggerId = triggerId;
         this.popupTitle = popupTitle;
         this.popupBody = popupBody;
         this.options = options;

@@ -13,4 +13,8 @@ public interface PendingActionRepository extends JpaRepository<PendingAction, Lo
     );
 
     boolean existsByStaffCall_CallIdAndBlockerType(Long callId, BlockerType blockerType);
+
+    boolean existsByTriggerTagScanLog_ScanIdAndBlockerType(Long scanId, BlockerType blockerType);
+
+    boolean existsByTriggerInteractionLog_InteractionIdAndBlockerType(Long interactionId, BlockerType blockerType);
 }

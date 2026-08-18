@@ -13,4 +13,6 @@ public interface StaffCallRepository extends JpaRepository<StaffCall, Long> {
     List<StaffCall> findBySession_SessionId(String sessionId);
 
     List<StaffCall> findBySession_SessionIdAndStatus(String sessionId, StaffCallStatus status);
+
+    List<StaffCall> findBySession_SessionIdAndStatusNot(String sessionId, StaffCallStatus status);
 }
