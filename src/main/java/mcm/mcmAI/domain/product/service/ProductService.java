@@ -96,12 +96,19 @@ public class ProductService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "태그에 해당하는 SKU를 찾을 수 없습니다: " + tagId));
 
+        System.out.println("=== DEBUG tagId=" + tagId
+                + " sku.styleNumber=[" + sku.getStyleNumber() + "]"
+                + " sku.styleNumber.length=" + (sku.getStyleNumber() == null ? "null" : sku.getStyleNumber().length()));
+
         Product product = findProduct(sku.getProduct().getProductId());
 
         String imageUrl = skuImageRepository
                 .findFirstByStyleNumberAndShotTypeOrderByPositionAsc(sku.getStyleNumber(), ShotType.PRODUCT)
                 .map(SkuImage::getImageUrl)
                 .orElse(null);
+
+
+        System.out.println("=== DEBUG resolvedImageUrl=" + imageUrl);
 
         List<HubOptionDTO> hubOptions = HubOptionProvider.firstLevelOptions();
 

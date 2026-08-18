@@ -50,7 +50,7 @@ public class PendingActionService {
     private static final List<PendingActionOption> CB3_OPTIONS = List.of(
             new PendingActionOption("escalate_call", "우선 호출 요청", ActionNextStep.STAFF_CALL_CREATED)
     );
-
+    private static final String TRIGGER_ID_CB3_1 = "T-CB3-1";
     private static final String PRICE_SUB_OPTION = "PRICE";
 
     private static final String TRIGGER_ID_CB5_1 = "T-CB5-1";
@@ -144,8 +144,8 @@ public class PendingActionService {
                 continue;
             }
 
-            createBlocker(
-                    session, BlockerType.CB3, staffCall.getProduct(), staffCall,
+            saveBlocker(
+                    session, BlockerType.CB3, staffCall.getProduct(), staffCall, null, null, TRIGGER_ID_CB3_1,
                     CB3_POPUP_TITLE, CB3_POPUP_BODY, CB3_OPTIONS
             );
         }
