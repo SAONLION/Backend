@@ -1,5 +1,6 @@
 package mcm.mcmAI.domain.pendingaction.service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -33,6 +34,8 @@ import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -78,6 +81,25 @@ public class PendingActionService {
     private static final List<PendingActionOption> CB6_A_OPTIONS = List.of(
             new PendingActionOption("show_detail_reason", "결정 근거 더 보기", ActionNextStep.SHOW_RECOMMENDATIONS),
             new PendingActionOption("ask_staff", "직원과 상담하기", ActionNextStep.STAFF_CALL_CREATED)
+    );
+
+    private static final String TRIGGER_ID_CB6_B = "T-CB6-b";
+    private static final int CB6_B_MIN_REVISIT_COUNT = 2;
+    private static final long CB6_B_MIN_DWELL_MINUTES = 3;
+    private static final String CB6_B_POPUP_TITLE = "이 제품, 계속 눈에 밟히시나요?";
+    private static final String CB6_B_POPUP_BODY = "여러 번 확인하신 제품이에요. 결정에 도움이 필요하신가요?";
+    private static final List<PendingActionOption> CB6_B_OPTIONS = List.of(
+            new PendingActionOption("show_detail_reason", "결정 근거 더 보기", ActionNextStep.SHOW_RECOMMENDATIONS),
+            new PendingActionOption("ask_staff", "직원과 상담하기", ActionNextStep.STAFF_CALL_CREATED)
+    );
+
+    private static final String TRIGGER_ID_CB6_C = "T-CB6-c";
+    private static final long CB6_C_INACTIVITY_MINUTES = 5;
+    private static final String CB6_C_POPUP_TITLE = "다른 제품도 보여드릴까요?";
+    private static final String CB6_C_POPUP_BODY = "상담 후 결정이 어려우셨다면, 다른 옵션을 안내해드릴게요.";
+    private static final List<PendingActionOption> CB6_C_OPTIONS = List.of(
+            new PendingActionOption("recommend_alt", "다른 상품 추천받기", ActionNextStep.SHOW_RECOMMENDATIONS),
+            new PendingActionOption("ask_staff", "직원과 다시 상담하기", ActionNextStep.STAFF_CALL_CREATED)
     );
 
     private final PendingActionRepository pendingActionRepository;
@@ -277,6 +299,108 @@ public class PendingActionService {
         });
     }
 
+    @Transactional
+    public void checkAndCreateCb6bBlocker(Session session) {
+        String sessionId = session.getSessionId();
+        List<TagScanLog> allScans = tagScanLogRepository.findBySession_SessionIdOrderByScanOrderAsc(sessionId);
+
+        Map<Long, List<TagScanLog>> scansBySku = allScans.stream()
+                .filter(scan -> scan.getSku() != null && scan.getScannedAt() != null)
+                .collect(Collectors.groupingBy(scan -> scan.getSku().getSku()));
+
+        for (Map.Entry<Long, List<TagScanLog>> entry : scansBySku.entrySet()) {
+            List<TagScanLog> scans = entry.getValue();
+            if (scans.size() < CB6_B_MIN_REVISIT_COUNT) {
+                continue;
+            }
+
+            LocalDateTime firstSeen = scans.stream().map(TagScanLog::getScannedAt).min(LocalDateTime::compareTo).orElseThrow();
+            LocalDateTime lastSeen = scans.stream().map(TagScanLog::getScannedAt).max(LocalDateTime::compareTo).orElseThrow();
+            long dwellMinutes = Duration.between(firstSeen, lastSeen).toMinutes();
+            if (dwellMinutes < CB6_B_MIN_DWELL_MINUTES) {
+                continue;
+            }
+
+            Sku sku = scans.get(0).getSku();
+            Product product = sku.getProduct();
+
+            boolean hasNewerTagElsewhere = allScans.stream()
+                    .anyMatch(scan -> !scan.getSku().getSku().equals(sku.getSku())
+                            && scan.getScannedAt() != null && scan.getScannedAt().isAfter(lastSeen));
+            if (hasNewerTagElsewhere) {
+                continue;
+            }
+
+            if (isCb3Excluded(sessionId) || isCb5PriceTierExcluded(sessionId, sku)) {
+                continue;
+            }
+
+            boolean purchaseInquiryAfter = purchaseInquiryRepository
+                    .existsBySession_SessionIdAndInquiredAtAfter(sessionId, firstSeen);
+            if (purchaseInquiryAfter) {
+                continue;
+            }
+
+            boolean alreadyCreated = pendingActionRepository
+                    .existsBySession_SessionIdAndProduct_ProductIdAndBlockerTypeAndStatus(
+                            sessionId, product.getProductId(), BlockerType.CB6, PendingActionStatus.PENDING);
+            if (alreadyCreated) {
+                continue;
+            }
+
+            saveBlocker(
+                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_B,
+                    CB6_B_POPUP_TITLE, CB6_B_POPUP_BODY, CB6_B_OPTIONS
+            );
+        }
+    }
+
+    @Transactional
+    public void checkAndCreateCb6cBlocker(Session session) {
+        String sessionId = session.getSessionId();
+        LocalDateTime inactivityThreshold = LocalDateTime.now().minusMinutes(CB6_C_INACTIVITY_MINUTES);
+
+        List<StaffCall> completedCalls = staffCallRepository
+                .findBySession_SessionIdAndStatus(sessionId, StaffCallStatus.COMPLETED);
+
+        for (StaffCall call : completedCalls) {
+            LocalDateTime consultationEndedAt = call.getUpdatedAt();
+            if (consultationEndedAt == null || consultationEndedAt.isAfter(inactivityThreshold)) {
+                continue;
+            }
+
+            Product product = call.getProduct();
+            if (product == null) {
+                continue;
+            }
+
+            boolean purchaseAfter = purchaseInquiryRepository
+                    .existsBySession_SessionIdAndInquiredAtAfter(sessionId, consultationEndedAt);
+            if (purchaseAfter) {
+                continue;
+            }
+
+            boolean hasActivityAfter = tagScanLogRepository.findBySession_SessionIdOrderByScanOrderAsc(sessionId).stream()
+                    .anyMatch(scan -> scan.getScannedAt() != null && scan.getScannedAt().isAfter(consultationEndedAt))
+                    || interactionLogRepository.findBySession_SessionId(sessionId).stream()
+                    .anyMatch(log -> log.getCreatedAt() != null && log.getCreatedAt().isAfter(consultationEndedAt));
+            if (hasActivityAfter) {
+                continue;
+            }
+
+            boolean alreadyCreated = pendingActionRepository
+                    .existsBySession_SessionIdAndProduct_ProductIdAndBlockerTypeAndStatus(
+                            sessionId, product.getProductId(), BlockerType.CB6, PendingActionStatus.PENDING);
+            if (alreadyCreated) {
+                continue;
+            }
+
+            saveBlocker(
+                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_C,
+                    CB6_C_POPUP_TITLE, CB6_C_POPUP_BODY, CB6_C_OPTIONS
+            );
+        }
+    }
     private InteractionLog latestBefore(List<InteractionLog> sortedAscendingByCreatedAt, LocalDateTime timestamp) {
         InteractionLog latest = null;
         for (InteractionLog candidate : sortedAscendingByCreatedAt) {
