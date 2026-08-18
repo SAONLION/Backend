@@ -27,6 +27,8 @@ import mcm.mcmAI.domain.staffcall.repository.StaffCallRepository;
 import mcm.mcmAI.domain.staffcall.type.StaffCallStatus;
 import mcm.mcmAI.domain.tagscanlog.entity.TagScanLog;
 import mcm.mcmAI.domain.tagscanlog.repository.TagScanLogRepository;
+import mcm.mcmAI.domain.tryonrequest.entity.TryonRequest;
+import mcm.mcmAI.domain.tryonrequest.repository.TryonRequestRepository;
 import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -69,12 +71,22 @@ public class PendingActionService {
             new PendingActionOption("recommend_alt", "다른 상품 보기", ActionNextStep.SHOW_RECOMMENDATIONS)
     );
 
+    private static final String TRIGGER_ID_CB6_A = "T-CB6-a";
+    private static final long CB6_A_TRYON_ELAPSED_THRESHOLD_MINUTES = 15;
+    private static final String CB6_A_POPUP_TITLE = "고민이 되실 만한 지점이 있으실까요?";
+    private static final String CB6_A_POPUP_BODY = "착용해보신 제품, 결정에 도움이 될 정보를 더 안내해드릴까요?";
+    private static final List<PendingActionOption> CB6_A_OPTIONS = List.of(
+            new PendingActionOption("show_detail_reason", "결정 근거 더 보기", ActionNextStep.SHOW_RECOMMENDATIONS),
+            new PendingActionOption("ask_staff", "직원과 상담하기", ActionNextStep.STAFF_CALL_CREATED)
+    );
+
     private final PendingActionRepository pendingActionRepository;
     private final SessionRepository sessionRepository;
     private final StaffCallRepository staffCallRepository;
     private final TagScanLogRepository tagScanLogRepository;
     private final InteractionLogRepository interactionLogRepository;
     private final PurchaseInquiryRepository purchaseInquiryRepository;
+    private final TryonRequestRepository tryonRequestRepository;
 
     @Transactional
     public PendingActionResponse getPendingAction(String sessionId) {
@@ -83,6 +95,7 @@ public class PendingActionService {
         checkAndCreateCb3Blocker(session);
         checkAndCreateCb5_1Blocker(session);
         checkAndCreateCb5_2Blocker(session);
+        checkAndCreateCb6Blocker(session);
 
         return pendingActionRepository
                 .findFirstBySession_SessionIdAndStatusOrderByCreatedAtDesc(sessionId, PendingActionStatus.PENDING)
@@ -196,6 +209,72 @@ public class PendingActionService {
                 session, latestPriceDisclosure.getSku().getProduct(), latestPriceDisclosure, TRIGGER_ID_CB5_2,
                 CB5_2_POPUP_TITLE, CB5_2_POPUP_BODY, CB5_2_OPTIONS
         );
+    }
+
+    // ===== CB6-a 판정 로직 =====
+    @Transactional
+    public void checkAndCreateCb6Blocker(Session session) {
+        String sessionId = session.getSessionId();
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(CB6_A_TRYON_ELAPSED_THRESHOLD_MINUTES);
+
+        List<TryonRequest> tryonRequests = tryonRequestRepository.findBySession_SessionId(sessionId);
+
+        for (TryonRequest tryon : tryonRequests) {
+            LocalDateTime requestedAt = tryon.getRequestedAt();
+            if (requestedAt == null || requestedAt.isAfter(threshold)) {
+                continue;
+            }
+
+            Product product = tryon.getSku().getProduct();
+
+            // 배타 라우팅: CB3/CB5 조건에 이미 걸리면 CB6 평가 안 함
+            // TODO: CB1(품절 조회) 배타 조건 — 재고조회 엔티티 확인 후 추가
+            if (isCb3Excluded(sessionId) || isCb5PriceTierExcluded(sessionId, tryon.getSku())) {
+                continue;
+            }
+
+            boolean purchaseInquiryAfterTryon = purchaseInquiryRepository
+                    .existsBySession_SessionIdAndInquiredAtAfter(sessionId, requestedAt);
+            if (purchaseInquiryAfterTryon) {
+                continue;
+            }
+
+            boolean alreadyCreated = pendingActionRepository
+                    .existsBySession_SessionIdAndProduct_ProductIdAndBlockerTypeAndStatus(
+                            sessionId, product.getProductId(), BlockerType.CB6, PendingActionStatus.PENDING);
+            if (alreadyCreated) {
+                continue;
+            }
+
+            saveBlocker(
+                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_A,
+                    CB6_A_POPUP_TITLE, CB6_A_POPUP_BODY, CB6_A_OPTIONS
+            );
+        }
+    }
+
+    private boolean isCb3Excluded(String sessionId) {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(CB3_UNANSWERED_THRESHOLD_MINUTES);
+        return staffCallRepository.findBySession_SessionIdAndStatus(sessionId, StaffCallStatus.REQUESTED).stream()
+                .anyMatch(call -> call.getRequestedAt() != null && call.getRequestedAt().isBefore(threshold));
+    }
+
+    private boolean isCb5PriceTierExcluded(String sessionId, Sku baselineSku) {
+        List<InteractionLog> priceDisclosures = interactionLogRepository.findBySession_SessionId(sessionId).stream()
+                .filter(this::isPriceDisclosure)
+                .toList();
+        if (priceDisclosures.isEmpty()) {
+            return false;
+        }
+
+        List<TagScanLog> scans = tagScanLogRepository.findBySession_SessionIdOrderByScanOrderAsc(sessionId);
+        return scans.stream().anyMatch(scan -> {
+            InteractionLog priceDisclosure = latestBefore(
+                    priceDisclosures.stream().sorted(Comparator.comparing(InteractionLog::getCreatedAt)).toList(),
+                    scan.getScannedAt()
+            );
+            return priceDisclosure != null && isLowerTierSwitch(priceDisclosure.getSku(), scan.getSku());
+        });
     }
 
     private InteractionLog latestBefore(List<InteractionLog> sortedAscendingByCreatedAt, LocalDateTime timestamp) {
