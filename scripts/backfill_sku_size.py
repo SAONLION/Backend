@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CSV_PATH = REPO_ROOT / "final_backdata" / "data" / "products.csv"
+DEFAULT_CSV_PATH = REPO_ROOT / "finale_backdata" / "data" / "products.csv"
 
 
 def parse_jdbc_url(url: str) -> tuple[str, int, str]:

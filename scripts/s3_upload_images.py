@@ -23,9 +23,9 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SQLITE_PATH = REPO_ROOT / "final_backdata" / "data" / "catalog.sqlite"
-DEFAULT_IMAGES_ROOT = REPO_ROOT / "final_backdata"
-DEFAULT_MANIFEST_OUT = REPO_ROOT / "final_backdata" / "data" / "s3_manifest.csv"
+DEFAULT_SQLITE_PATH = REPO_ROOT / "finale_backdata" / "data" / "catalog.sqlite"
+DEFAULT_IMAGES_ROOT = REPO_ROOT / "finale_backdata"
+DEFAULT_MANIFEST_OUT = REPO_ROOT / "finale_backdata" / "data" / "s3_manifest.csv"
 
 
 def fetch_image_rows(sqlite_path: Path) -> list[dict]:

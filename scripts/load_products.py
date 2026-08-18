@@ -39,8 +39,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SQLITE_PATH = REPO_ROOT / "final_backdata" / "data" / "catalog.sqlite"
-DEFAULT_CATEGORY_NDJSON_PATH = REPO_ROOT / "final_backdata" / "data" / "category_products.ndjson"
+DEFAULT_SQLITE_PATH = REPO_ROOT / "finale_backdata" / "data" / "catalog.sqlite"
+DEFAULT_CATEGORY_NDJSON_PATH = REPO_ROOT / "finale_backdata" / "data" / "category_products.ndjson"
 
 MATERIAL_LABELS = {
     "body": "바디",

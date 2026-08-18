@@ -21,8 +21,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SQLITE_PATH = REPO_ROOT / "final_backdata" / "data" / "catalog.sqlite"
-DEFAULT_MANIFEST_PATH = REPO_ROOT / "final_backdata" / "data" / "s3_manifest.csv"
+DEFAULT_SQLITE_PATH = REPO_ROOT / "finale_backdata" / "data" / "catalog.sqlite"
+DEFAULT_MANIFEST_PATH = REPO_ROOT / "finale_backdata" / "data" / "s3_manifest.csv"
 
 SHOT_TYPE_MAP = {"product": "PRODUCT", "model": "MODEL"}
 

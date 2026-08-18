@@ -3,5 +3,5 @@ build
 .git
 .idea
 *.md
-backdata
+finale_backdata
 application-local.yaml
