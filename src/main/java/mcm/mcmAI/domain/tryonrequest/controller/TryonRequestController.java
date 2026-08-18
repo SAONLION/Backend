@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.tryonrequest.dto.TryonRequestRequest;
 import mcm.mcmAI.domain.tryonrequest.dto.TryonRequestResponse;
 import mcm.mcmAI.domain.tryonrequest.service.TryonRequestService;
+import mcm.mcmAI.global.aop.RequiresActiveSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,6 +31,7 @@ public class TryonRequestController {
                     + "프론트에서 단순 로딩 연출로 처리한다. 세션이 존재하지 않으면 404(SESSION_NOT_FOUND), "
                     + "sku가 존재하지 않으면 404(SKU_NOT_FOUND)를 반환한다."
     )
+    @RequiresActiveSession
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TryonRequestResponse createTryonRequest(

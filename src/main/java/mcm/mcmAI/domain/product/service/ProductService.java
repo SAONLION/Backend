@@ -32,10 +32,8 @@ import mcm.mcmAI.domain.skuimage.type.ShotType;
 import mcm.mcmAI.domain.tagscanlog.service.TagScanLogService;
 import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -93,12 +91,7 @@ public class ProductService {
     @Transactional
     public ProductTagScanResponseDTO getProductByTag(Long tagId, String sessionId) {
         Sku sku = skuRepository.findById(tagId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "태그에 해당하는 SKU를 찾을 수 없습니다: " + tagId));
-
-        System.out.println("=== DEBUG tagId=" + tagId
-                + " sku.styleNumber=[" + sku.getStyleNumber() + "]"
-                + " sku.styleNumber.length=" + (sku.getStyleNumber() == null ? "null" : sku.getStyleNumber().length()));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SKU_NOT_FOUND));
 
         Product product = findProduct(sku.getProduct().getProductId());
 
@@ -106,9 +99,6 @@ public class ProductService {
                 .findFirstByStyleNumberAndShotTypeOrderByPositionAsc(sku.getStyleNumber(), ShotType.PRODUCT)
                 .map(SkuImage::getImageUrl)
                 .orElse(null);
-
-
-        System.out.println("=== DEBUG resolvedImageUrl=" + imageUrl);
 
         List<HubOptionDTO> hubOptions = HubOptionProvider.firstLevelOptions();
 

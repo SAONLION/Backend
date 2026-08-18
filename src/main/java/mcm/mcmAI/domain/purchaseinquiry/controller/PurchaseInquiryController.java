@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.purchaseinquiry.dto.PurchaseInquiryRequest;
 import mcm.mcmAI.domain.purchaseinquiry.dto.PurchaseInquiryResponse;
 import mcm.mcmAI.domain.purchaseinquiry.service.PurchaseInquiryService;
+import mcm.mcmAI.global.aop.RequiresActiveSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,6 +31,7 @@ public class PurchaseInquiryController {
                     + "이벤트로 intent-score 산정 시 가장 중요하게 반영될 예정이다. 세션이 존재하지 않으면 "
                     + "404(SESSION_NOT_FOUND), sku가 존재하지 않으면 404(SKU_NOT_FOUND)를 반환한다."
     )
+    @RequiresActiveSession
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PurchaseInquiryResponse createPurchaseInquiry(

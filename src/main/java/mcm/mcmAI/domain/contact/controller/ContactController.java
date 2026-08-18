@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.contact.dto.ContactRequest;
 import mcm.mcmAI.domain.contact.dto.ContactResponse;
 import mcm.mcmAI.domain.contact.service.ContactService;
+import mcm.mcmAI.global.aop.RequiresActiveSession;
 import mcm.mcmAI.global.exception.ErrorCode;
 import mcm.mcmAI.global.exception.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -38,6 +39,7 @@ public class ContactController {
                     + "선택값이다. 세션이 존재하지 않으면 404(SESSION_NOT_FOUND), email이 비어있으면 "
                     + "400(MISSING_CONTACT_INFO), email 형식이 올바르지 않으면 400(INVALID_EMAIL)을 반환한다."
     )
+    @RequiresActiveSession
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ContactResponse createContact(

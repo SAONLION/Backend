@@ -9,6 +9,7 @@ import mcm.mcmAI.domain.staffcall.dto.StaffCallRequest;
 import mcm.mcmAI.domain.staffcall.dto.StaffCallResponse;
 import mcm.mcmAI.domain.staffcall.dto.StaffCallStatusResponse;
 import mcm.mcmAI.domain.staffcall.service.StaffCallService;
+import mcm.mcmAI.global.aop.RequiresActiveSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,6 +35,7 @@ public class StaffCallController {
                     + "않으면 404(SESSION_NOT_FOUND), productId가 존재하지 않는 제품이면 404(PRODUCT_NOT_FOUND), "
                     + "productId가 비어있으면 400(MISSING_PRODUCT_ID)을 반환한다."
     )
+    @RequiresActiveSession
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public StaffCallResponse createStaffCall(

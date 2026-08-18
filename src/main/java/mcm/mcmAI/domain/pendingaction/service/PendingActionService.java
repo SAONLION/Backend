@@ -110,14 +110,21 @@ public class PendingActionService {
     private final PurchaseInquiryRepository purchaseInquiryRepository;
     private final TryonRequestRepository tryonRequestRepository;
 
+
     @Transactional
     public PendingActionResponse getPendingAction(String sessionId) {
         Session session = findSession(sessionId);
+
+        if (session.getEndedAt() != null) {
+            return PendingActionResponse.none();
+        }
 
         checkAndCreateCb3Blocker(session);
         checkAndCreateCb5_1Blocker(session);
         checkAndCreateCb5_2Blocker(session);
         checkAndCreateCb6Blocker(session);
+        checkAndCreateCb6bBlocker(session);
+        checkAndCreateCb6cBlocker(session);
 
         return pendingActionRepository
                 .findFirstBySession_SessionIdAndStatusOrderByCreatedAtDesc(sessionId, PendingActionStatus.PENDING)

@@ -7,10 +7,10 @@ import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.tagscanlog.entity.TagScanLog;
 import mcm.mcmAI.domain.tagscanlog.repository.TagScanLogRepository;
-import org.springframework.http.HttpStatus;
+import mcm.mcmAI.global.exception.BusinessException;
+import mcm.mcmAI.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -23,8 +23,7 @@ public class TagScanLogService {
     @Transactional
     public void recordScan(String sessionId, Sku sku) {
         Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
 
         int scanOrder = (int) tagScanLogRepository.countBySession_SessionId(sessionId) + 1;
 

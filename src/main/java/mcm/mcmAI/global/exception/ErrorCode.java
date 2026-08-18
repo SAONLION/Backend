@@ -7,6 +7,7 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 제품을 찾을 수 없습니다."),
     OPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 옵션을 찾을 수 없습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없습니다."),
+    SESSION_ALREADY_ENDED(HttpStatus.CONFLICT, "이미 종료된 세션입니다."),
     ACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 액션을 찾을 수 없습니다."),
     INVALID_RESPONSE_KEY(HttpStatus.BAD_REQUEST, "허용되지 않은 응답 값입니다."),
     INVALID_EMAIL(HttpStatus.BAD_REQUEST, "이메일 형식을 확인해주세요."),

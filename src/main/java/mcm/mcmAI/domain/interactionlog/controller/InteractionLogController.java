@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.interactionlog.dto.InteractionLogRequest;
 import mcm.mcmAI.domain.interactionlog.dto.InteractionLogResponse;
 import mcm.mcmAI.domain.interactionlog.service.InteractionLogService;
+import mcm.mcmAI.global.aop.RequiresActiveSession;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,6 +29,7 @@ public class InteractionLogController {
                     + "durationSeconds(탭 체류 시간, 초)는 선택 항목이며 없으면 null로 저장된다. "
                     + "세션이 존재하지 않거나 SKU가 존재하지 않으면 404, interestType이 유효하지 않으면 400을 반환한다."
     )
+    @RequiresActiveSession
     @PostMapping
     public InteractionLogResponse recordInteraction(
             @Parameter(description = "세션 ID", example = "550e8400-e29b-41d4-a716-446655440000")
