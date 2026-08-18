@@ -37,7 +37,7 @@ public class StaffCall extends BaseEntity {
     private Session session;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id")
     private Product product;
 
     @Column(name = "reason", length = 200, nullable = false)

@@ -75,8 +75,7 @@ def upload_all(rows: list[dict], images_root: Path, bucket: str, region: str, pr
                     if e.response["Error"]["Code"] not in ("404", "NoSuchKey"):
                         raise
 
-            content_type = mimetypes.guess_type(str(local_path))[0] or "application/octet-stream"
-            s3.upload_file(str(local_path), bucket, s3_key, ExtraArgs={"ContentType": content_type})
+            s3.upload_file(str(local_path), bucket, s3_key, ExtraArgs={"ContentType": "image/webp"})
             uploaded += 1
 
         manifest_rows.append({**row, "s3_key": s3_key, "image_url": image_url})

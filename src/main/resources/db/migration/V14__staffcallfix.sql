@@ -1,0 +1,1 @@
+ALTER TABLE `staff_call` MODIFY COLUMN `product_id` BIGINT NULL;

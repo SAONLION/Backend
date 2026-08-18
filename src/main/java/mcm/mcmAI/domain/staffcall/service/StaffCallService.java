@@ -30,12 +30,10 @@ public class StaffCallService {
         Session session = findSession(sessionId);
 
         Long productId = request.productId();
-        if (productId == null) {
-            throw new BusinessException(ErrorCode.MISSING_PRODUCT_ID);
-        }
-
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+        Product product = (productId != null)
+                ? productRepository.findById(productId)
+                  .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND))
+                : null;
 
         StaffCall staffCall = StaffCall.builder()
                 .session(session)
