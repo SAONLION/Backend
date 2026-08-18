@@ -1,5 +1,6 @@
 package mcm.mcmAI.domain.product.repository;
 
+import java.util.Collection;
 import java.util.List;
 import mcm.mcmAI.domain.product.entity.Product;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
+
+    List<Product> findByEmbeddingIsNull();
+
+    List<Product> findByEmbeddingIsNotNullAndProductIdNotIn(Collection<Long> excludeProductIds);
 
     @Query(value = """
             SELECT p.*

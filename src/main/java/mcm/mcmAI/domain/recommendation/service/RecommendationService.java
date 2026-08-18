@@ -2,13 +2,19 @@ package mcm.mcmAI.domain.recommendation.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import mcm.mcmAI.domain.interactionlog.entity.InteractionLog;
+import mcm.mcmAI.domain.interactionlog.repository.InteractionLogRepository;
 import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.product.repository.ProductRepository;
 import mcm.mcmAI.domain.recommendation.dto.RecommendationItem;
@@ -19,6 +25,8 @@ import mcm.mcmAI.domain.tagscanlog.entity.TagScanLog;
 import mcm.mcmAI.domain.tagscanlog.repository.TagScanLogRepository;
 import mcm.mcmAI.domain.visitpurpose.entity.VisitPurpose;
 import mcm.mcmAI.domain.visitpurpose.repository.VisitPurposeRepository;
+import mcm.mcmAI.global.ai.CosineSimilarity;
+import mcm.mcmAI.global.ai.EmbeddingCodec;
 import mcm.mcmAI.global.ai.OpenAiClient;
 import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
@@ -32,14 +40,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class RecommendationService {
 
-    private static final int CANDIDATE_LIMIT = 5;
+    private static final int RECOMMENDATION_LIMIT = 3;
     private static final double PRICE_BAND_RATIO = 0.3;
     private static final int VIEWED_PRODUCT_CONTEXT_LIMIT = 5;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final String SYSTEM_PROMPT = """
-            당신은 명품 매장의 AI 판매 어시스턴트입니다. 주어진 고객 컨텍스트와 후보 상품 목록을 보고, \
+            당신은 명품 매장의 AI 판매 어시스턴트입니다. 주어진 고객 세션 맥락과 후보 상품 목록을 보고, \
             각 후보 상품을 왜 추천하는지 1문장의 자연스러운 한국어 이유를 생성하세요.
             반드시 다음 JSON 형식으로만 응답하세요: {"items":[{"productId":number,"reason":string}]}.
             후보 상품 목록에 없는 productId를 지어내면 안 됩니다. 가능하면 모든 후보에 대해 이유를 생성하세요.""";
@@ -47,8 +55,10 @@ public class RecommendationService {
     private final ProductRepository productRepository;
     private final TagScanLogRepository tagScanLogRepository;
     private final VisitPurposeRepository visitPurposeRepository;
+    private final InteractionLogRepository interactionLogRepository;
     private final SessionRepository sessionRepository;
     private final OpenAiClient openAiClient;
+    private final EmbeddingCodec embeddingCodec;
 
     public RecommendationsResponse getRecommendations(String sessionId) {
         requireSession(sessionId);
@@ -58,108 +68,207 @@ public class RecommendationService {
             return new RecommendationsResponse(List.of());
         }
 
-        List<Product> candidates = findCandidates(scanLogs);
-        if (candidates.isEmpty()) {
-            return new RecommendationsResponse(List.of());
-        }
+        Set<Long> excludeProductIds = scanLogs.stream()
+                .map(scanLog -> scanLog.getSku().getProduct().getProductId())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
 
         VisitPurpose visitPurpose = visitPurposeRepository.findBySession_SessionId(sessionId).orElse(null);
-        String customerContext = buildCustomerContext(visitPurpose, scanLogs);
-        Map<Long, String> reasonsByProductId = generateReasons(candidates, customerContext);
+        List<InteractionLog> interactionLogs = interactionLogRepository.findBySession_SessionId(sessionId);
+        String sessionContext = buildSessionContext(visitPurpose, scanLogs, interactionLogs);
+
+        Optional<List<Product>> similarCandidates = findSimilarCandidates(sessionContext, excludeProductIds);
+        if (similarCandidates.isEmpty()) {
+            return fallbackRecommendations(scanLogs, excludeProductIds);
+        }
+        List<Product> candidates = similarCandidates.get();
+
+        Optional<Map<Long, String>> reasonsByProductId = generateReasons(candidates, sessionContext);
+        if (reasonsByProductId.isEmpty()) {
+            return fallbackRecommendations(scanLogs, excludeProductIds);
+        }
 
         List<RecommendationItem> items = candidates.stream()
                 .map(product -> new RecommendationItem(
-                        product.getProductId(), product.getName(), reasonsByProductId.get(product.getProductId())))
+                        product.getProductId(),
+                        product.getName(),
+                        reasonsByProductId.get().get(product.getProductId())))
                 .toList();
 
         return new RecommendationsResponse(items);
     }
 
-    private List<Product> findCandidates(List<TagScanLog> scanLogs) {
+    // 세션 벡터를 생성하고, 이미 태그된 제품을 제외한 임베딩 보유 제품들과 코사인 유사도를 계산해 상위 N개를 고른다.
+    // 임베딩 호출이 실패했거나(키 미설정/네트워크 오류) 비교할 벡터가 하나도 없으면 빈 Optional을 반환한다.
+    private Optional<List<Product>> findSimilarCandidates(String sessionContext, Set<Long> excludeProductIds) {
+        Optional<float[]> sessionVectorOpt;
+        try {
+            sessionVectorOpt = openAiClient.requestEmbedding(sessionContext);
+        } catch (Exception e) {
+            log.warn("세션 임베딩 생성에 실패했습니다: {}", e.getMessage());
+            return Optional.empty();
+        }
+        if (sessionVectorOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        float[] sessionVector = sessionVectorOpt.get();
+
+        List<Product> vectorizedProducts =
+                productRepository.findByEmbeddingIsNotNullAndProductIdNotIn(excludeProductIds);
+        if (vectorizedProducts.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<ScoredProduct> scoredProducts = new ArrayList<>();
+        for (Product product : vectorizedProducts) {
+            float[] productVector = embeddingCodec.decode(product.getEmbedding());
+            if (productVector == null || productVector.length != sessionVector.length) {
+                continue;
+            }
+            scoredProducts.add(new ScoredProduct(product, CosineSimilarity.compute(sessionVector, productVector)));
+        }
+        if (scoredProducts.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<Product> topCandidates = scoredProducts.stream()
+                .sorted(Comparator.comparingDouble(ScoredProduct::similarity).reversed())
+                .limit(RECOMMENDATION_LIMIT)
+                .map(ScoredProduct::product)
+                .toList();
+
+        return Optional.of(topCandidates);
+    }
+
+    // 임베딩/LLM 호출이 실패했을 때 쓰는 안전망: 기존 카테고리+가격대(±30%) 규칙으로 후보를 추리고 이유 없이 반환한다.
+    private RecommendationsResponse fallbackRecommendations(List<TagScanLog> scanLogs, Set<Long> excludeProductIds) {
         Sku recentSku = scanLogs.get(0).getSku();
         Product recentProduct = recentSku.getProduct();
-
-        List<Long> excludeProductIds = scanLogs.stream()
-                .map(scanLog -> scanLog.getSku().getProduct().getProductId())
-                .distinct()
-                .toList();
 
         Integer referencePrice = recentSku.getPrice();
         int minPrice = referencePrice != null ? (int) (referencePrice * (1 - PRICE_BAND_RATIO)) : 0;
         int maxPrice = referencePrice != null ? (int) (referencePrice * (1 + PRICE_BAND_RATIO)) : Integer.MAX_VALUE;
 
-        return productRepository.findRecommendationCandidates(
+        List<Product> candidates = productRepository.findRecommendationCandidates(
                 recentProduct.getCategory(),
-                excludeProductIds,
+                excludeProductIds.stream().toList(),
                 minPrice,
                 maxPrice,
                 referencePrice != null ? referencePrice : 0,
-                PageRequest.of(0, CANDIDATE_LIMIT)
+                PageRequest.of(0, RECOMMENDATION_LIMIT)
         );
+
+        List<RecommendationItem> items = candidates.stream()
+                .map(product -> new RecommendationItem(product.getProductId(), product.getName(), null))
+                .toList();
+
+        return new RecommendationsResponse(items);
     }
 
-    private String buildCustomerContext(VisitPurpose visitPurpose, List<TagScanLog> scanLogs) {
-        StringBuilder context = new StringBuilder();
+    // AI가 아닌 순수 텍스트 조합: 방문 목적 + 태그한 제품명 + interaction_log 기반 관심사를 한 문장으로 합친다.
+    private String buildSessionContext(
+            VisitPurpose visitPurpose, List<TagScanLog> scanLogs, List<InteractionLog> interactionLogs
+    ) {
+        StringBuilder context = new StringBuilder("이 고객은 ");
+
         if (visitPurpose != null) {
-            context.append("방문 목적: ").append(visitPurpose.getPurposeType().getLabel()).append(". ");
+            context.append(visitPurpose.getPurposeType().getLabel()).append(" 목적으로 방문했고, ");
         }
 
-        String viewedProductNames = scanLogs.stream()
+        String taggedProductNames = scanLogs.stream()
                 .map(scanLog -> scanLog.getSku().getProduct().getName())
                 .distinct()
                 .limit(VIEWED_PRODUCT_CONTEXT_LIMIT)
                 .collect(Collectors.joining(", "));
+        if (!taggedProductNames.isBlank()) {
+            context.append(taggedProductNames).append("을(를) 태그했으며, ");
+        }
 
-        if (!viewedProductNames.isBlank()) {
-            context.append("최근 관심 상품: ").append(viewedProductNames).append(".");
+        String topInterest = findTopInterest(interactionLogs);
+        if (topInterest != null) {
+            context.append(topInterest).append("을(를) 오래 살펴보았다.");
+        } else {
+            if (context.toString().endsWith(", ")) {
+                context.setLength(context.length() - 2);
+            }
+            context.append('.');
         }
 
         return context.toString();
     }
 
-    private Map<Long, String> generateReasons(List<Product> candidates, String customerContext) {
+    // 상세 옵션(subOption, 예: 소재)이 있으면 그것을, 없으면 제품명을 기준으로 관심 시간을 합산해 가장 오래 본 대상을 찾는다.
+    private String findTopInterest(List<InteractionLog> interactionLogs) {
+        if (interactionLogs.isEmpty()) {
+            return null;
+        }
+
+        Map<String, Integer> durationByLabel = new LinkedHashMap<>();
+        for (InteractionLog interactionLog : interactionLogs) {
+            String label = (interactionLog.getSubOption() != null && !interactionLog.getSubOption().isBlank())
+                    ? interactionLog.getSubOption()
+                    : interactionLog.getSku().getProduct().getName();
+            int duration = interactionLog.getDurationSeconds() != null ? interactionLog.getDurationSeconds() : 0;
+            durationByLabel.merge(label, duration, Integer::sum);
+        }
+
+        return durationByLabel.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
+    }
+
+    // 후보(최대 3개) + 세션 맥락을 LLM에 전달해 이유를 생성한다. 호출/파싱이 실패하면 빈 Optional(=fallback 신호)을 반환한다.
+    private Optional<Map<Long, String>> generateReasons(List<Product> candidates, String sessionContext) {
         Set<Long> candidateIds = candidates.stream().map(Product::getProductId).collect(Collectors.toSet());
 
+        Optional<String> content;
         try {
-            String userPrompt = buildUserPrompt(candidates, customerContext);
-            return openAiClient.requestChatCompletion(SYSTEM_PROMPT, userPrompt, true)
-                    .map(content -> parseReasons(content, candidateIds))
-                    .orElseGet(Map::of);
+            String userPrompt = buildUserPrompt(candidates, sessionContext);
+            content = openAiClient.requestChatCompletion(SYSTEM_PROMPT, userPrompt, true);
         } catch (Exception e) {
-            log.warn("추천 이유 생성에 실패해 기본 추천만 반환합니다: {}", e.getMessage());
-            return Map.of();
+            log.warn("추천 이유 생성 요청에 실패했습니다: {}", e.getMessage());
+            return Optional.empty();
+        }
+        if (content.isEmpty()) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(parseReasons(content.get(), candidateIds));
+        } catch (Exception e) {
+            log.warn("OpenAI 응답 파싱에 실패했습니다: {}", e.getMessage());
+            return Optional.empty();
         }
     }
 
-    private String buildUserPrompt(List<Product> candidates, String customerContext) throws Exception {
+    private String buildUserPrompt(List<Product> candidates, String sessionContext) throws Exception {
         List<CandidatePromptItem> promptItems = candidates.stream()
                 .map(product -> new CandidatePromptItem(
                         product.getProductId(), product.getName(), product.getCategory()))
                 .toList();
 
-        return "고객 컨텍스트: " + customerContext + "\n"
+        return "고객 세션 맥락: " + sessionContext + "\n"
                 + "후보 상품 목록: " + OBJECT_MAPPER.writeValueAsString(promptItems);
     }
 
-    private Map<Long, String> parseReasons(String content, Set<Long> candidateIds) {
-        try {
-            JsonNode items = OBJECT_MAPPER.readTree(content).path("items");
-            Map<Long, String> reasons = new LinkedHashMap<>();
-            for (JsonNode item : items) {
-                long productId = item.path("productId").asLong();
-                String reason = item.path("reason").asText(null);
-                if (reason != null && !reason.isBlank() && candidateIds.contains(productId)) {
-                    reasons.put(productId, reason);
-                }
+    // 환각 방지: 응답 JSON 자체는 유효하되, 후보 목록에 없는 productId가 섞여 있으면 그 항목만 걸러낸다.
+    private Map<Long, String> parseReasons(String content, Set<Long> candidateIds) throws Exception {
+        JsonNode items = OBJECT_MAPPER.readTree(content).path("items");
+        Map<Long, String> reasons = new LinkedHashMap<>();
+        for (JsonNode item : items) {
+            long productId = item.path("productId").asLong();
+            String reason = item.path("reason").asText(null);
+            if (reason != null && !reason.isBlank() && candidateIds.contains(productId)) {
+                reasons.put(productId, reason);
             }
-            return reasons;
-        } catch (Exception e) {
-            log.warn("OpenAI 응답 파싱에 실패했습니다: {}", e.getMessage());
-            return Map.of();
         }
+        return reasons;
     }
 
     private record CandidatePromptItem(Long productId, String name, String category) {
+    }
+
+    private record ScoredProduct(Product product, double similarity) {
     }
 
     private void requireSession(String sessionId) {

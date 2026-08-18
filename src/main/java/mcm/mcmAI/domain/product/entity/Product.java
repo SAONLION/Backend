@@ -35,6 +35,9 @@ public class Product extends BaseEntity {
     @Column(name = "heritage_desc", columnDefinition = "TEXT")
     private String heritageDesc;
 
+    @Column(name = "embedding", columnDefinition = "TEXT")
+    private String embedding;
+
     @Builder
     public Product(String name, String category, String materialDesc, String heritageDesc) {
         this.name = name;
@@ -48,5 +51,9 @@ public class Product extends BaseEntity {
         this.category = category;
         this.materialDesc = materialDesc;
         this.heritageDesc = heritageDesc;
+    }
+
+    public void updateEmbedding(String embedding) {
+        this.embedding = embedding;
     }
 }

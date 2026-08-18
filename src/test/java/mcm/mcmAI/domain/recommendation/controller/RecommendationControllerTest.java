@@ -4,11 +4,15 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,6 +56,8 @@ class RecommendationControllerTest {
     @Autowired
     private TagScanLogRepository tagScanLogRepository;
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @MockitoBean
     private OpenAiClient openAiClient;
 
@@ -75,36 +81,64 @@ class RecommendationControllerTest {
     }
 
     @Test
-    void AI가_유효한_이유를_반환하면_추천에_reason이_포함된다() throws Exception {
+    void 유사도가_높은_상위_3개_후보가_이유와_함께_추천된다() throws Exception {
         Session session = newSession();
-        Product scannedProduct = newProduct("bag");
-        Sku scannedSku = newSku(scannedProduct, 200_000);
-        recordScan(session, scannedSku, 1);
+        Product scannedProduct = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
+        recordScan(session, newSku(scannedProduct, 200_000), 1);
 
-        Product candidate = newProduct("bag");
-        newSku(candidate, 220_000);
+        Product best = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
+        Product good = newVectorizedProduct("bag", new float[]{0.8f, 0.6f, 0f});
+        Product ok = newVectorizedProduct("bag", new float[]{0.6f, 0.8f, 0f});
+        Product far = newVectorizedProduct("bag", new float[]{0f, 0f, 1f});
 
+        given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.of(new float[]{1f, 0f, 0f}));
         given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
                 .willReturn(Optional.of("""
-                        {"items":[{"productId":%d,"reason":"비슷한 스타일의 컴팩트한 사이즈예요."}]}
-                        """.formatted(candidate.getProductId())));
+                        {"items":[
+                          {"productId":%d,"reason":"가장 잘 어울려요."},
+                          {"productId":%d,"reason":"비슷한 스타일이에요."},
+                          {"productId":%d,"reason":"취향에 맞을 거예요."}
+                        ]}
+                        """.formatted(best.getProductId(), good.getProductId(), ok.getProductId())));
 
         mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.recommendations[0].productId").value(candidate.getProductId()))
-                .andExpect(jsonPath("$.recommendations[0].reason").value("비슷한 스타일의 컴팩트한 사이즈예요."));
+                .andExpect(jsonPath("$.recommendations.length()").value(3))
+                .andExpect(jsonPath("$.recommendations[0].productId").value(best.getProductId()))
+                .andExpect(jsonPath("$.recommendations[0].reason").value("가장 잘 어울려요."))
+                .andExpect(jsonPath("$.recommendations[1].productId").value(good.getProductId()))
+                .andExpect(jsonPath("$.recommendations[2].productId").value(ok.getProductId()));
     }
 
     @Test
-    void AI가_후보_목록에_없는_productId를_지어내면_해당_추천은_reason_없이_내려간다() throws Exception {
+    void 이미_태그한_제품은_유사도가_가장_높아도_후보에서_제외된다() throws Exception {
         Session session = newSession();
-        Product scannedProduct = newProduct("bag");
-        Sku scannedSku = newSku(scannedProduct, 200_000);
-        recordScan(session, scannedSku, 1);
+        Product scannedProduct = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
+        recordScan(session, newSku(scannedProduct, 200_000), 1);
 
-        Product candidate = newProduct("bag");
-        newSku(candidate, 220_000);
+        Product untaggedCandidate = newVectorizedProduct("bag", new float[]{0.5f, 0.5f, 0f});
 
+        given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.of(new float[]{1f, 0f, 0f}));
+        given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
+                .willReturn(Optional.of("""
+                        {"items":[{"productId":%d,"reason":"관심 있으실 만한 상품이에요."}]}
+                        """.formatted(untaggedCandidate.getProductId())));
+
+        mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recommendations.length()").value(1))
+                .andExpect(jsonPath("$.recommendations[0].productId").value(untaggedCandidate.getProductId()));
+    }
+
+    @Test
+    void AI가_후보_목록에_없는_productId를_지어내면_해당_추천은_이유_없이_내려간다() throws Exception {
+        Session session = newSession();
+        Product scannedProduct = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
+        recordScan(session, newSku(scannedProduct, 200_000), 1);
+
+        Product candidate = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
+
+        given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.of(new float[]{1f, 0f, 0f}));
         given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
                 .willReturn(Optional.of("""
                         {"items":[{"productId":999999999,"reason":"존재하지 않는 상품에 대한 이유"}]}
@@ -117,30 +151,52 @@ class RecommendationControllerTest {
     }
 
     @Test
-    void AI_호출이_실패해도_reason_없이_기본_추천_목록을_반환한다() throws Exception {
+    void 임베딩_생성에_실패하면_카테고리_가격대_규칙으로_폴백하고_이유_없이_반환한다() throws Exception {
         Session session = newSession();
         Product scannedProduct = newProduct("bag");
-        Sku scannedSku = newSku(scannedProduct, 200_000);
-        recordScan(session, scannedSku, 1);
+        recordScan(session, newSku(scannedProduct, 200_000), 1);
 
-        Product candidate = newProduct("bag");
-        newSku(candidate, 220_000);
+        Product fallbackCandidate = newProduct("bag");
+        newSku(fallbackCandidate, 220_000);
 
+        given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recommendations[0].productId").value(fallbackCandidate.getProductId()))
+                .andExpect(jsonPath("$.recommendations[0].reason").value(nullValue()));
+
+        verify(openAiClient, never()).requestChatCompletion(anyString(), anyString(), anyBoolean());
+    }
+
+    @Test
+    void 이유_생성_호출이_실패하면_카테고리_가격대_규칙으로_폴백하고_이유_없이_반환한다() throws Exception {
+        Session session = newSession();
+        Product scannedProduct = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
+        recordScan(session, newSku(scannedProduct, 200_000), 1);
+
+        // 임베딩 유사도로는 후보가 되지만, 규칙 기반 폴백 조건(카테고리/가격대)은 만족하지 않는 상품
+        newVectorizedProduct("shoes", new float[]{0.9f, 0.1f, 0f});
+
+        Product fallbackCandidate = newProduct("bag");
+        newSku(fallbackCandidate, 220_000);
+
+        given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.of(new float[]{1f, 0f, 0f}));
         given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
                 .willReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.recommendations[0].productId").value(candidate.getProductId()))
+                .andExpect(jsonPath("$.recommendations.length()").value(1))
+                .andExpect(jsonPath("$.recommendations[0].productId").value(fallbackCandidate.getProductId()))
                 .andExpect(jsonPath("$.recommendations[0].reason").value(nullValue()));
     }
 
     @Test
-    void 카테고리나_가격대가_다르면_후보에서_제외되어_빈_목록을_반환한다() throws Exception {
+    void 폴백_상태에서도_카테고리나_가격대가_다르면_후보에서_제외되어_빈_목록을_반환한다() throws Exception {
         Session session = newSession();
         Product scannedProduct = newProduct("bag");
-        Sku scannedSku = newSku(scannedProduct, 200_000);
-        recordScan(session, scannedSku, 1);
+        recordScan(session, newSku(scannedProduct, 200_000), 1);
 
         Product otherCategory = newProduct("shoes");
         newSku(otherCategory, 200_000);
@@ -148,11 +204,34 @@ class RecommendationControllerTest {
         Product tooExpensive = newProduct("bag");
         newSku(tooExpensive, 1_000_000);
 
+        given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.empty());
+
         mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.recommendations").isEmpty());
 
-        verifyNoInteractions(openAiClient);
+        verify(openAiClient, never()).requestChatCompletion(anyString(), anyString(), anyBoolean());
+    }
+
+    @Test
+    void 최대_3개까지만_반환된다() throws Exception {
+        Session session = newSession();
+        Product scannedProduct = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
+        recordScan(session, newSku(scannedProduct, 200_000), 1);
+
+        for (int i = 0; i < 5; i++) {
+            newVectorizedProduct("bag", new float[]{1f - i * 0.05f, i * 0.05f, 0f});
+        }
+
+        given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.of(new float[]{1f, 0f, 0f}));
+        given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
+                .willReturn(Optional.of("""
+                        {"items":[]}
+                        """));
+
+        mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recommendations.length()").value(3));
     }
 
     private Session newSession() {
@@ -167,6 +246,20 @@ class RecommendationControllerTest {
                 .name("테스트 상품 " + UUID.randomUUID())
                 .category(category)
                 .build());
+    }
+
+    private Product newVectorizedProduct(String category, float[] embedding) {
+        Product product = newProduct(category);
+        product.updateEmbedding(encodeEmbedding(embedding));
+        return productRepository.save(product);
+    }
+
+    private String encodeEmbedding(float[] embedding) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(embedding);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private Sku newSku(Product product, int price) {

@@ -37,3 +37,4 @@ openai:
   base-url: https://api.openai.com/v1
   api-key: ${OPENAI_API_KEY:}
   model: gpt-4o-mini
+  embedding-model: text-embedding-3-small
