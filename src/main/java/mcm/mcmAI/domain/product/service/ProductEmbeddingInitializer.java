@@ -51,6 +51,15 @@ public class ProductEmbeddingInitializer implements ApplicationRunner {
                 product.updateEmbedding(embeddingCodec.encode(vector.get()));
                 productRepository.save(product);
                 successCount++;
+
+                // 🟢 Rate Limit(429) 방지를 위한 250ms(0.25초) 대기
+                Thread.sleep(250);
+
+            } catch (InterruptedException e) {
+
+                Thread.currentThread().interrupt();
+                log.warn("임베딩 백필 작업이 중단되었습니다.");
+                break;
             } catch (Exception e) {
                 log.warn("제품 임베딩 생성 실패: productId={}, error={}", product.getProductId(), e.getMessage());
             }
