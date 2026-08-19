@@ -176,4 +176,4 @@ Testcontainers로 실제 MySQL 컨테이너를 띄워 도메인별 통합 테스
 PM 정민규
 DE 박윤서 이수민
 FE 신하빈 최정인
-BM 이어진
+BE 이어진
