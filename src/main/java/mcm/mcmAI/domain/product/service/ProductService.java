@@ -54,6 +54,11 @@ public class ProductService {
     // HubOptionDetailProvider의 기존 고정 안내문을 그대로 사용한다(P2-4 스킵 대상).
     private static final Set<String> PRODUCT_LEVEL_OPTION_IDS = Set.of("1", "2", "3", "4", "5", "6");
 
+    // 소재/헤리티지/관리(안감)/원산지는 색상(SKU)마다 원본 값이 다를 수 있다(예: Ottomar 위켄더
+    // 핑크=16K, 코냑=24K 하드웨어). skuId가 주어지면 이 옵션들만 해당 SKU 하나로 좁혀서 조회한다.
+    // 사이즈 가이드(5)·컬러 옵션(6)은 상품 전체 SKU를 모아 보여주는 것이 의도이므로 대상에서 제외한다.
+    private static final Set<String> SKU_SCOPED_OPTION_IDS = Set.of("1", "2", "3", "4");
+
     private final ProductRepository productRepository;
     private final SkuRepository skuRepository;
     private final SkuImageRepository skuImageRepository;
@@ -122,28 +127,30 @@ public class ProductService {
         return HubOptionProvider.subOptionsOf(type);
     }
 
-    public HubOptionResponse getHubOptionDetail(Long productId, String optionId) {
+    public HubOptionResponse getHubOptionDetail(Long productId, String optionId, Long skuId) {
         findProduct(productId);
 
-        return buildProductLevelDetail(productId, optionId)
+        return buildProductLevelDetail(productId, optionId, skuId)
                 .or(() -> HubOptionDetailProvider.detailOf(optionId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.OPTION_NOT_FOUND));
     }
 
-    // optionId 1~6은 스캔 세션과 무관하게 productId만으로 호출되므로(구체적으로 스캔된 SKU/색상을
-    // 알 수 없음) 해당 상품의 SKU 목록 중 각 필드가 채워진 첫 번째 값을 대표값으로 사용한다.
-    // sku.color/size처럼 SKU마다 달라지는 값(5, 6)은 전체 SKU에서 값을 모아 보여준다.
-    private Optional<HubOptionResponse> buildProductLevelDetail(Long productId, String optionId) {
+    // optionId 1~6은 productId(+선택적으로 skuId)로 호출된다. skuId가 주어지고 색상별로 값이
+    // 달라질 수 있는 옵션(1~4)이면 해당 SKU 하나의 값만 사용한다. skuId가 없으면(레거시 호출) 상품의
+    // SKU 목록 중 각 필드가 채워진 첫 번째 값을 대표값으로 사용한다. sku.color/size처럼 SKU마다
+    // 달라지는 값(5, 6)은 skuId와 무관하게 항상 전체 SKU에서 값을 모아 보여준다.
+    private Optional<HubOptionResponse> buildProductLevelDetail(Long productId, String optionId, Long skuId) {
         if (!PRODUCT_LEVEL_OPTION_IDS.contains(optionId)) {
             return Optional.empty();
         }
 
         List<Sku> skus = skuRepository.findByProduct_ProductIdOrderBySkuAsc(productId);
+        List<Sku> targetSkus = resolveTargetSkus(skus, optionId, skuId);
         String content = switch (optionId) {
-            case "1" -> materialContent(skus);
-            case "2" -> heritageContent(skus);
-            case "3" -> firstNonBlank(skus, Sku::getLiningCareText);
-            case "4" -> firstNonBlank(skus, Sku::getCountryOfOrigin);
+            case "1" -> materialContent(targetSkus);
+            case "2" -> heritageContent(targetSkus);
+            case "3" -> firstNonBlank(targetSkus, Sku::getLiningCareText);
+            case "4" -> firstNonBlank(targetSkus, Sku::getCountryOfOrigin);
             case "5" -> sizeGuideContent(skus);
             case "6" -> colorOptionContent(skus);
             default -> null;
@@ -154,12 +161,26 @@ public class ProductService {
                         base.optionId(), base.type(), base.title(), content, base.nextStep(), base.pickupMethods()));
     }
 
+    private List<Sku> resolveTargetSkus(List<Sku> skus, String optionId, Long skuId) {
+        if (skuId == null || !SKU_SCOPED_OPTION_IDS.contains(optionId)) {
+            return skus;
+        }
+        return skus.stream()
+                .filter(sku -> sku.getSku().equals(skuId))
+                .findFirst()
+                .map(List::of)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SKU_NOT_FOUND));
+    }
+
     private String materialContent(List<Sku> skus) {
         String body = firstNonBlank(skus, Sku::getBodyMaterial);
         String trim = firstNonBlank(skus, Sku::getTrimMaterial);
         String hardware = firstNonBlank(skus, Sku::getHardwareText);
+        String lining = firstNonBlank(skus, Sku::getLiningCareText);
+        String countryOfOrigin = firstNonBlank(skus, Sku::getCountryOfOrigin);
         String sustainability = firstNonBlank(skus, Sku::getSustainabilityCertification);
-        if (body == null && trim == null && hardware == null && sustainability == null) {
+        if (body == null && trim == null && hardware == null && lining == null
+                && countryOfOrigin == null && sustainability == null) {
             return null;
         }
         StringBuilder content = new StringBuilder();
@@ -171,6 +192,12 @@ public class ProductService {
         }
         if (hardware != null) {
             appendLine(content, hardware);
+        }
+        if (lining != null) {
+            appendLine(content, lining);
+        }
+        if (countryOfOrigin != null) {
+            appendLine(content, "제조국: " + countryOfOrigin);
         }
         if (sustainability != null) {
             appendLine(content, "지속가능성 인증: " + sustainability);

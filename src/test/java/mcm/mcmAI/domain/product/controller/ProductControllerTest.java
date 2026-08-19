@@ -185,6 +185,64 @@ class ProductControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void 허브옵션1_소재는_안감과_제조국도_content에_포함된다() throws Exception {
+        Product product = newProduct();
+        skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Cognac")
+                .bodyMaterial("비세토스 모노그램 캔버스")
+                .liningCareText("소가죽 안감으로 마감되었습니다.")
+                .countryOfOrigin("대한민국")
+                .build());
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value(
+                        "바디: 비세토스 모노그램 캔버스\n소가죽 안감으로 마감되었습니다.\n제조국: 대한민국"));
+    }
+
+    @Test
+    void 허브옵션1_소재는_skuId를_지정하면_해당_SKU의_값만_반환한다() throws Exception {
+        Product product = newProduct();
+        Sku pink = skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Pink")
+                .hardwareText("16K 골드 톤 하드웨어")
+                .build());
+        Sku cognac = skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Cognac")
+                .hardwareText("24K 골드 톤 하드웨어")
+                .build());
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "1")
+                        .param("skuId", pink.getSku().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("16K 골드 톤 하드웨어"));
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "1")
+                        .param("skuId", cognac.getSku().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("24K 골드 톤 하드웨어"));
+    }
+
+    @Test
+    void 허브옵션1_소재는_skuId가_해당_상품의_SKU가_아니면_404와_SKU_NOT_FOUND_코드를_반환한다() throws Exception {
+        Product product = newProduct();
+        newSku(product, 5);
+        Product otherProduct = newProduct();
+        Sku skuOfOtherProduct = newSku(otherProduct, 5);
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "1")
+                        .param("skuId", skuOfOtherProduct.getSku().toString()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SKU_NOT_FOUND"));
+    }
+
+    @Test
     void 허브옵션4_원산지는_상품_SKU의_country_of_origin을_content로_반환한다() throws Exception {
         Product product = newProduct();
         skuRepository.save(Sku.builder()

@@ -65,8 +65,11 @@ public class ProductController {
             summary = "허브 하위 옵션 상세 조회",
             description = "2차 허브 옵션 목록 중 하나를 클릭했을 때 상세 내용을 반환한다. 옵션 타입이 INFO면 content를 "
                     + "바로 노출하고, STAFF_MEDIATED면 실제 값(특히 가격) 대신 다음 단계 안내를 반환한다 — 가격은 "
-                    + "절대 직접 노출하지 않으며 SA가 대시보드에서 안내한다. productId 또는 optionId가 존재하지 "
-                    + "않으면 각각 PRODUCT_NOT_FOUND, OPTION_NOT_FOUND 코드와 함께 404를 반환한다."
+                    + "절대 직접 노출하지 않으며 SA가 대시보드에서 안내한다. optionId 1(소재)~4(원산지)는 색상별로 "
+                    + "값이 다를 수 있어 skuId로 현재 보고 있는 SKU를 지정해야 정확한 값이 내려간다 — 생략하면 "
+                    + "상품의 SKU 중 값이 채워진 첫 SKU를 대표값으로 사용한다. productId 또는 optionId가 존재하지 "
+                    + "않으면 각각 PRODUCT_NOT_FOUND, OPTION_NOT_FOUND 코드와 함께 404를, skuId가 해당 제품의 "
+                    + "SKU가 아니면 SKU_NOT_FOUND 코드와 함께 404를 반환한다."
     )
     @GetMapping("/{productId}/hub/options/{optionId}")
     public HubOptionResponse getHubOptionDetail(
@@ -74,9 +77,13 @@ public class ProductController {
             @PathVariable Long productId,
 
             @Parameter(description = "2차 허브 옵션 조회 응답(options[].id)의 하위 옵션 ID", example = "9")
-            @PathVariable String optionId
+            @PathVariable String optionId,
+
+            @Parameter(description = "현재 보고 있는 SKU(색상) ID. optionId 1~4에서 색상별로 값이 다른 필드를 "
+                    + "정확히 조회할 때 사용하며, 생략 가능", example = "1")
+            @RequestParam(required = false) Long skuId
     ) {
-        return productService.getHubOptionDetail(productId, optionId);
+        return productService.getHubOptionDetail(productId, optionId, skuId);
     }
 
     @Operation(
