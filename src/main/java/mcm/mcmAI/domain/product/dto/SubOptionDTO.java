@@ -12,6 +12,9 @@ public record SubOptionDTO(
         String label,
 
         @Schema(description = "세부 옵션 타입 코드", example = "MATERIAL")
-        String type
+        String type,
+
+        @Schema(description = "처리 방식 (INFO: 바로 내용 노출, STAFF_MEDIATED: 다음 단계 안내)", example = "STAFF_MEDIATED", nullable = true)
+        String mediation
 ) {
 }

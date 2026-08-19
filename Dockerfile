@@ -16,6 +16,8 @@ RUN ./gradlew clean bootJar -x test
 # 2단계: 실행 (가벼운 JRE 이미지에 jar만 복사)
 FROM --platform=linux/amd64 eclipse-temurin:17-jre
 WORKDIR /app
+# 컨테이너 기본 TZ가 UTC라 LocalDateTime.now()가 UTC로 채워지던 문제 방지 (KST 고정)
+ENV TZ=Asia/Seoul
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

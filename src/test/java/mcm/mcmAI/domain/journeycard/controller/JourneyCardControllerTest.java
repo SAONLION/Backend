@@ -1,5 +1,7 @@
 package mcm.mcmAI.domain.journeycard.controller;
 
+import mcm.mcmAI.support.AbstractIntegrationTest;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class JourneyCardControllerTest {
+class JourneyCardControllerTest extends AbstractIntegrationTest {
 
     private static final AtomicLong SKU_ID_SEQUENCE = new AtomicLong(940_000_000L);
     private static final AtomicLong STYLE_NUMBER_SEQUENCE = new AtomicLong(1L);

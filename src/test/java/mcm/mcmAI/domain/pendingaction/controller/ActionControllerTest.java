@@ -1,5 +1,7 @@
 package mcm.mcmAI.domain.pendingaction.controller;
 
+import mcm.mcmAI.support.AbstractIntegrationTest;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class ActionControllerTest {
+class ActionControllerTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

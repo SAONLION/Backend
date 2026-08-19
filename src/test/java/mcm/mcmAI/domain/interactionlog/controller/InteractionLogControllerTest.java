@@ -1,5 +1,7 @@
 package mcm.mcmAI.domain.interactionlog.controller;
 
+import mcm.mcmAI.support.AbstractIntegrationTest;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,7 +30,7 @@ import com.jayway.jsonpath.JsonPath;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class InteractionLogControllerTest {
+class InteractionLogControllerTest extends AbstractIntegrationTest {
 
     private static final AtomicLong SKU_ID_SEQUENCE = new AtomicLong(950_000_000L);
 

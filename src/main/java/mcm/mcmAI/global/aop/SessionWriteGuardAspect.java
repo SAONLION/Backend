@@ -10,8 +10,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
-
-import java.util.NoSuchElementException;
+import mcm.mcmAI.global.exception.BusinessException;
+import mcm.mcmAI.global.exception.ErrorCode;
 
 @Aspect
 @Component
@@ -25,7 +25,7 @@ public class SessionWriteGuardAspect {
         String sessionId = extractSessionId(joinPoint, requiresActiveSession.sessionIdParam());
 
         Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NoSuchElementException("session not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
 
         if (session.getEndedAt() != null) {
             throw new BusinessException(ErrorCode.SESSION_ALREADY_ENDED);

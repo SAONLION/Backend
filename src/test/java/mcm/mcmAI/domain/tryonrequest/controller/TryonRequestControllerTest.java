@@ -1,5 +1,7 @@
 package mcm.mcmAI.domain.tryonrequest.controller;
 
+import mcm.mcmAI.support.AbstractIntegrationTest;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -23,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class TryonRequestControllerTest {
+class TryonRequestControllerTest extends AbstractIntegrationTest {
 
     private static final AtomicLong SKU_ID_SEQUENCE = new AtomicLong(960_000_000L);
 

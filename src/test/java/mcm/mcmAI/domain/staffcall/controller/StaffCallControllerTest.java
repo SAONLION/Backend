@@ -1,5 +1,7 @@
 package mcm.mcmAI.domain.staffcall.controller;
 
+import mcm.mcmAI.support.AbstractIntegrationTest;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @Transactional
 @TestPropertySource(properties = "app.internal-test-endpoints.enabled=true")
-class StaffCallControllerTest {
+class StaffCallControllerTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

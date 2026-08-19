@@ -27,7 +27,8 @@ public class TryonRequestController {
 
     @Operation(
             summary = "착장 요청",
-            description = "고객이 사이즈/컬러를 선택하고 직원에게 착장을 요청한다. 직원 도착 여부는 추적하지 않으며 "
+            description = "고객이 선택한 SKU로 직원에게 착장을 요청한다. 사이즈·컬러는 서버가 해당 SKU 기준으로 "
+                    + "확정해 응답에 내려주므로 요청에는 포함하지 않는다. 직원 도착 여부는 추적하지 않으며 "
                     + "프론트에서 단순 로딩 연출로 처리한다. 세션이 존재하지 않으면 404(SESSION_NOT_FOUND), "
                     + "sku가 존재하지 않으면 404(SKU_NOT_FOUND)를 반환한다."
     )

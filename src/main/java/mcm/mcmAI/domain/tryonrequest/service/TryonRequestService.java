@@ -35,8 +35,8 @@ public class TryonRequestService {
         TryonRequest tryonRequest = TryonRequest.builder()
                 .session(session)
                 .sku(sku)
-                .size(request.size())
-                .color(request.color())
+                .size(sku.getSize())
+                .color(sku.getColor())
                 .build();
 
         return TryonRequestResponse.from(tryonRequestRepository.save(tryonRequest));

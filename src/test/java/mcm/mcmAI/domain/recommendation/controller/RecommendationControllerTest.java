@@ -31,6 +31,7 @@ import mcm.mcmAI.domain.skuimage.type.ShotType;
 import mcm.mcmAI.domain.tagscanlog.entity.TagScanLog;
 import mcm.mcmAI.domain.tagscanlog.repository.TagScanLogRepository;
 import mcm.mcmAI.global.ai.OpenAiClient;
+import mcm.mcmAI.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,7 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class RecommendationControllerTest {
+class RecommendationControllerTest extends AbstractIntegrationTest {
 
     private static final AtomicLong SKU_ID_SEQUENCE = new AtomicLong(920_000_000L);
 
@@ -143,6 +144,12 @@ class RecommendationControllerTest {
 
         Product untaggedCandidate = newVectorizedProduct("bag", new float[]{0.5f, 0.5f, 0f});
 
+        // 3개를 채우기 위한 인기 폴백용 상품 2개 (스캔 이력 없음 → scan_count 0, product_id 순으로 채워짐)
+        Product popularFiller1 = newProduct("bag");
+        newSku(popularFiller1, 200_000);
+        Product popularFiller2 = newProduct("bag");
+        newSku(popularFiller2, 200_000);
+
         given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.of(new float[]{1f, 0f, 0f}));
         given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
                 .willReturn(Optional.of("""
@@ -151,7 +158,7 @@ class RecommendationControllerTest {
 
         mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.recommendations.length()").value(1))
+                .andExpect(jsonPath("$.recommendations.length()").value(3))
                 .andExpect(jsonPath("$.recommendations[0].productId").value(untaggedCandidate.getProductId()));
     }
 
@@ -200,12 +207,14 @@ class RecommendationControllerTest {
         Product scannedProduct = newVectorizedProduct("bag", new float[]{1f, 0f, 0f});
         recordScan(session, newSku(scannedProduct, 200_000), 1);
 
-        // 임베딩 유사도로는 후보가 되지만, 규칙 기반 폴백 조건(카테고리/가격대)은 만족하지 않는 상품
-        // -> AI 이유 생성이 실패하면 이 상품은 신뢰하지 않고 버리되, 규칙/인기 후보로도 채울 게 없으면 최후 인기 폴백으로 채워진다.
         Product looseFitProduct = newVectorizedProduct("shoes", new float[]{0.9f, 0.1f, 0f});
 
         Product fallbackCandidate = newProduct("bag");
         newSku(fallbackCandidate, 220_000);
+
+        // 3번째로 채워질 인기 폴백용 상품 - 카테고리·가격 둘 다 1,2단계 규칙과 무관하게
+        Product popularFiller = newProduct("watch");
+        newSku(popularFiller, 5_000_000);
 
         given(openAiClient.requestEmbedding(anyString())).willReturn(Optional.of(new float[]{1f, 0f, 0f}));
         given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
@@ -214,7 +223,7 @@ class RecommendationControllerTest {
         mockMvc.perform(get("/api/v1/session/recommendations").param("sessionId", session.getSessionId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("OK"))
-                .andExpect(jsonPath("$.recommendations.length()").value(2))
+                .andExpect(jsonPath("$.recommendations.length()").value(3))
                 .andExpect(jsonPath("$.recommendations[0].productId").value(fallbackCandidate.getProductId()))
                 .andExpect(jsonPath("$.recommendations[0].reason").value(nullValue()))
                 .andExpect(jsonPath("$.recommendations[1].productId").value(looseFitProduct.getProductId()))

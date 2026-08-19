@@ -1,5 +1,7 @@
 package mcm.mcmAI.internal.controller;
 
+import mcm.mcmAI.support.AbstractIntegrationTest;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class InternalTestStaffCallControllerDisabledTest {
+class InternalTestStaffCallControllerDisabledTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

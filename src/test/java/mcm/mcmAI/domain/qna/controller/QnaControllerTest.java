@@ -1,5 +1,7 @@
 package mcm.mcmAI.domain.qna.controller;
 
+import mcm.mcmAI.support.AbstractIntegrationTest;
+
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
@@ -28,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class QnaControllerTest {
+class QnaControllerTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
