@@ -63,8 +63,8 @@ public class StaffCallService {
     }
 
     @Transactional
-    public StaffCallResponse changeRequestedAtForTest(Long callId, LocalDateTime requestedAt) {
-        StaffCall staffCall = staffCallRepository.findById(callId)
+    public StaffCallResponse changeRequestedAtForTest(Long callId, String sessionId, LocalDateTime requestedAt) {
+        StaffCall staffCall = staffCallRepository.findByCallIdAndSession_SessionId(callId, sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
 
         staffCall.changeRequestedAt(requestedAt);

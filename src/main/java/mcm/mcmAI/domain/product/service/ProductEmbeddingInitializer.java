@@ -52,7 +52,7 @@ public class ProductEmbeddingInitializer implements ApplicationRunner {
                 productRepository.save(product);
                 successCount++;
 
-                // 🟢 Rate Limit(429) 방지를 위한 250ms(0.25초) 대기
+                // 🟢 Rate Limit(429) 방지를 위한 250ms(0.25초)    대기
                 Thread.sleep(250);
 
             } catch (InterruptedException e) {

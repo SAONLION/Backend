@@ -1,5 +1,6 @@
 package mcm.mcmAI.domain.tryonrequest.service;
 
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
@@ -39,5 +40,15 @@ public class TryonRequestService {
                 .build();
 
         return TryonRequestResponse.from(tryonRequestRepository.save(tryonRequest));
+    }
+
+    @Transactional
+    public TryonRequestResponse changeRequestedAtForTest(Long tryonRequestId, String sessionId, LocalDateTime requestedAt) {
+        TryonRequest tryonRequest = tryonRequestRepository.findByTryonRequestIdAndSession_SessionId(tryonRequestId, sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRYON_REQUEST_NOT_FOUND));
+
+        tryonRequest.changeRequestedAt(requestedAt);
+
+        return TryonRequestResponse.from(tryonRequest);
     }
 }

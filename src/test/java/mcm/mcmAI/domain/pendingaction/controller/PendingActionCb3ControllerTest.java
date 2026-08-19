@@ -57,7 +57,7 @@ class PendingActionCb3ControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasAction").value(true))
                 .andExpect(jsonPath("$.action.blockerType").value("CB3"))
-                .andExpect(jsonPath("$.action.popupTitle").value("고객님, 잠시만 기다려주세요"))
+                .andExpect(jsonPath("$.action.popupTitle").value("직원에게 직접 안내를\n받아보시겠어요?"))
                 .andExpect(jsonPath("$.action.popupBody").value("담당 직원을 우선적으로 호출해드릴까요?"))
                 .andExpect(jsonPath("$.action.options[0].key").value("escalate_call"))
                 .andExpect(jsonPath("$.action.options[0].label").value("우선 호출 요청"));

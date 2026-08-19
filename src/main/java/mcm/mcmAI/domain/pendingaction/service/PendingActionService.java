@@ -45,17 +45,19 @@ public class PendingActionService {
     private static final String DISMISSED_RESPONSE_KEY = "dismissed";
 
     private static final long CB3_UNANSWERED_THRESHOLD_MINUTES = 5;
-    private static final String CB3_POPUP_TITLE = "고객님, 잠시만 기다려주세요";
+    private static final String CB3_POPUP_TITLE = "직원에게 직접 안내를\n받아보시겠어요?";
     private static final String CB3_POPUP_BODY = "담당 직원을 우선적으로 호출해드릴까요?";
     private static final List<PendingActionOption> CB3_OPTIONS = List.of(
             new PendingActionOption("escalate_call", "우선 호출 요청", ActionNextStep.STAFF_CALL_CREATED)
     );
     private static final String TRIGGER_ID_CB3_1 = "T-CB3-1";
+    private static final int TIER_CB3_1 = 1;
     private static final String PRICE_SUB_OPTION = "PRICE";
 
     private static final String TRIGGER_ID_CB5_1 = "T-CB5-1";
     // 동일 카테고리 내에서 "하위 가격대"로 간주하는 최소 하락폭. 코드에 공식 가격 티어 개념이 없어
     // RecommendationService의 ±30% 유사가격대 규칙을 참고해 20% 이상 하락을 임계값으로 삼는다.
+    private static final int TIER_CB5_1 = 1;
     private static final double CB5_1_PRICE_DROP_RATIO = 0.2;
     private static final String CB5_1_POPUP_TITLE = "가격 부담이 있으실까요?";
     private static final String CB5_1_POPUP_BODY = "조금 더 합리적인 가격대의 제품도 함께 안내해드릴까요?";
@@ -65,6 +67,7 @@ public class PendingActionService {
     );
 
     private static final String TRIGGER_ID_CB5_2 = "T-CB5-2";
+    private static final int TIER_CB5_2 = 2;
     private static final long CB5_2_IDLE_THRESHOLD_MINUTES = 10;
     private static final List<String> CB5_2_PROMOTION_KEYWORDS = List.of("프로모션", "할인");
     private static final String CB5_2_POPUP_TITLE = "더 궁금하신 점 있으신가요?";
@@ -75,6 +78,7 @@ public class PendingActionService {
     );
 
     private static final String TRIGGER_ID_CB6_A = "T-CB6-a";
+    private static final int TIER_CB6_A = 2;
     private static final long CB6_A_TRYON_ELAPSED_THRESHOLD_MINUTES = 15;
     private static final String CB6_A_POPUP_TITLE = "고민이 되실 만한 지점이 있으실까요?";
     private static final String CB6_A_POPUP_BODY = "착용해보신 제품, 결정에 도움이 될 정보를 더 안내해드릴까요?";
@@ -84,6 +88,7 @@ public class PendingActionService {
     );
 
     private static final String TRIGGER_ID_CB6_B = "T-CB6-b";
+    private static final int TIER_CB6_B = 2;
     private static final int CB6_B_MIN_REVISIT_COUNT = 2;
     private static final long CB6_B_MIN_DWELL_MINUTES = 3;
     private static final String CB6_B_POPUP_TITLE = "이 제품, 계속 눈에 밟히시나요?";
@@ -94,6 +99,7 @@ public class PendingActionService {
     );
 
     private static final String TRIGGER_ID_CB6_C = "T-CB6-c";
+    private static final int TIER_CB6_C = 2;
     private static final long CB6_C_INACTIVITY_MINUTES = 5;
     private static final String CB6_C_POPUP_TITLE = "다른 제품도 보여드릴까요?";
     private static final String CB6_C_POPUP_BODY = "상담 후 결정이 어려우셨다면, 다른 옵션을 안내해드릴게요.";
@@ -152,7 +158,7 @@ public class PendingActionService {
             }
 
             saveBlocker(
-                    session, BlockerType.CB3, staffCall.getProduct(), staffCall, null, null, TRIGGER_ID_CB3_1,
+                    session, BlockerType.CB3, staffCall.getProduct(), staffCall, null, null, TRIGGER_ID_CB3_1, TIER_CB3_1,
                     CB3_POPUP_TITLE, CB3_POPUP_BODY, CB3_OPTIONS
             );
         }
@@ -191,7 +197,7 @@ public class PendingActionService {
             }
 
             createCb5Blocker(
-                    session, scan.getSku().getProduct(), scan, TRIGGER_ID_CB5_1,
+                    session, scan.getSku().getProduct(), scan, TRIGGER_ID_CB5_1,TIER_CB5_1,
                     CB5_1_POPUP_TITLE, CB5_1_POPUP_BODY, CB5_1_OPTIONS
             );
         }
@@ -235,7 +241,7 @@ public class PendingActionService {
         }
 
         createCb5Blocker(
-                session, latestPriceDisclosure.getSku().getProduct(), latestPriceDisclosure, TRIGGER_ID_CB5_2,
+                session, latestPriceDisclosure.getSku().getProduct(), latestPriceDisclosure, TRIGGER_ID_CB5_2,TIER_CB5_2,
                 CB5_2_POPUP_TITLE, CB5_2_POPUP_BODY, CB5_2_OPTIONS
         );
     }
@@ -276,7 +282,7 @@ public class PendingActionService {
             }
 
             saveBlocker(
-                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_A,
+                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_A, TIER_CB6_A,
                     CB6_A_POPUP_TITLE, CB6_A_POPUP_BODY, CB6_A_OPTIONS
             );
         }
@@ -356,7 +362,7 @@ public class PendingActionService {
             }
 
             saveBlocker(
-                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_B,
+                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_B, TIER_CB6_B,
                     CB6_B_POPUP_TITLE, CB6_B_POPUP_BODY, CB6_B_OPTIONS
             );
         }
@@ -403,7 +409,7 @@ public class PendingActionService {
             }
 
             saveBlocker(
-                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_C,
+                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_C, TIER_CB6_C,
                     CB6_C_POPUP_TITLE, CB6_C_POPUP_BODY, CB6_C_OPTIONS
             );
         }
@@ -495,29 +501,29 @@ public class PendingActionService {
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
         return saveBlocker(
-                session, blockerType, product, staffCall, null, null, null,
+                session, blockerType, product, staffCall, null, null, null,null,
                 popupTitle, popupBody, options
         );
     }
 
     @Transactional
     public PendingAction createCb5Blocker(
-            Session session, Product product, TagScanLog triggerTagScanLog, String triggerId,
+            Session session, Product product, TagScanLog triggerTagScanLog, String triggerId,Integer tier,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
         return saveBlocker(
-                session, BlockerType.CB5, product, null, triggerTagScanLog, null, triggerId,
+                session, BlockerType.CB5, product, null, triggerTagScanLog,null, triggerId,tier,
                 popupTitle, popupBody, options
         );
     }
 
     @Transactional
     public PendingAction createCb5Blocker(
-            Session session, Product product, InteractionLog triggerInteractionLog, String triggerId,
+            Session session, Product product, InteractionLog triggerInteractionLog, String triggerId,Integer tier,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
         return saveBlocker(
-                session, BlockerType.CB5, product, null, null, triggerInteractionLog, triggerId,
+                session, BlockerType.CB5, product, null, null, triggerInteractionLog, triggerId, tier,
                 popupTitle, popupBody, options
         );
     }
@@ -525,6 +531,7 @@ public class PendingActionService {
     private PendingAction saveBlocker(
             Session session, BlockerType blockerType, Product product, StaffCall staffCall,
             TagScanLog triggerTagScanLog, InteractionLog triggerInteractionLog, String triggerId,
+            Integer tier,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
         PendingAction pendingAction = PendingAction.builder()
@@ -535,6 +542,7 @@ public class PendingActionService {
                 .triggerTagScanLog(triggerTagScanLog)
                 .triggerInteractionLog(triggerInteractionLog)
                 .triggerId(triggerId)
+                .tier(tier)
                 .popupTitle(popupTitle)
                 .popupBody(popupBody)
                 .options(options)

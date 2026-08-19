@@ -13,6 +13,12 @@ public record PendingActionDetailDTO(
         @Schema(description = "블로커 유형", example = "CB5")
         String blockerType,
 
+        @Schema(description = "트리거 ID", example = "T-CB6-a")
+        String triggerId,
+
+        @Schema(description = "신호 등급 (1=확정, 2=추정)", example = "2")
+        Integer tier,
+
         @Schema(description = "관련 제품 ID (제품과 무관한 블로커는 null)", example = "1", nullable = true)
         Long productId,
 
@@ -34,6 +40,8 @@ public record PendingActionDetailDTO(
         return new PendingActionDetailDTO(
                 pendingAction.getActionId(),
                 pendingAction.getBlockerType().name(),
+                pendingAction.getTriggerId(),
+                pendingAction.getTier(),
                 productId,
                 pendingAction.getPopupTitle(),
                 pendingAction.getPopupBody(),

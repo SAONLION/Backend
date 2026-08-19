@@ -55,6 +55,6 @@ public class InternalTestStaffCallController {
 
             @Valid @RequestBody StaffCallTestRequestedAtRequest request
     ) {
-        return staffCallService.changeRequestedAtForTest(callId, request.requestedAt());
+        return staffCallService.changeRequestedAtForTest(callId, request.sessionId(), request.requestedAt());
     }
 }

@@ -54,4 +54,8 @@ public class TryonRequest extends BaseEntity {
         this.color = color;
         this.requestedAt = LocalDateTime.now();
     }
+
+    public void changeRequestedAt(LocalDateTime requestedAt) {
+        this.requestedAt = requestedAt;
+    }
 }

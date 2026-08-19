@@ -36,4 +36,22 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("referencePrice") int referencePrice,
             Pageable pageable
     );
+
+    // 카테고리/가격대 규칙으로도 후보를 채우지 못했을 때 쓰는 최후 폴백: 전체 세션에서 가장 많이 태그 스캔된(인기) 순으로 채운다.
+    @Query(value = """
+            SELECT p.*
+            FROM product p
+            LEFT JOIN (
+                SELECT s.product_id AS product_id, COUNT(*) AS scan_count
+                FROM tag_scan_log t
+                JOIN sku s ON s.sku = t.sku
+                GROUP BY s.product_id
+            ) sc ON sc.product_id = p.product_id
+            WHERE p.product_id NOT IN (:excludeProductIds)
+            ORDER BY COALESCE(sc.scan_count, 0) DESC, p.product_id ASC
+            """, nativeQuery = true)
+    List<Product> findPopularProductCandidates(
+            @Param("excludeProductIds") List<Long> excludeProductIds,
+            Pageable pageable
+    );
 }

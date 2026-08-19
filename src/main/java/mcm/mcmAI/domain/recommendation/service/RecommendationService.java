@@ -21,6 +21,9 @@ import mcm.mcmAI.domain.recommendation.dto.RecommendationItem;
 import mcm.mcmAI.domain.recommendation.dto.RecommendationsResponse;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
+import mcm.mcmAI.domain.sku.repository.SkuRepository;
+import mcm.mcmAI.domain.skuimage.repository.SkuImageRepository;
+import mcm.mcmAI.domain.skuimage.type.ShotType;
 import mcm.mcmAI.domain.tagscanlog.entity.TagScanLog;
 import mcm.mcmAI.domain.tagscanlog.repository.TagScanLogRepository;
 import mcm.mcmAI.domain.visitpurpose.entity.VisitPurpose;
@@ -43,6 +46,7 @@ public class RecommendationService {
     private static final int RECOMMENDATION_LIMIT = 3;
     private static final double PRICE_BAND_RATIO = 0.3;
     private static final int VIEWED_PRODUCT_CONTEXT_LIMIT = 5;
+    private static final long NO_EXCLUSION_SENTINEL_ID = 0L;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -57,6 +61,8 @@ public class RecommendationService {
     private final VisitPurposeRepository visitPurposeRepository;
     private final InteractionLogRepository interactionLogRepository;
     private final SessionRepository sessionRepository;
+    private final SkuRepository skuRepository;
+    private final SkuImageRepository skuImageRepository;
     private final OpenAiClient openAiClient;
     private final EmbeddingCodec embeddingCodec;
 
@@ -64,37 +70,36 @@ public class RecommendationService {
         requireSession(sessionId);
 
         List<TagScanLog> scanLogs = tagScanLogRepository.findBySession_SessionIdOrderByScanOrderDesc(sessionId);
-        if (scanLogs.isEmpty()) {
-            return new RecommendationsResponse(List.of());
-        }
-
         Set<Long> excludeProductIds = scanLogs.stream()
                 .map(scanLog -> scanLog.getSku().getProduct().getProductId())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (scanLogs.isEmpty()) {
+            // 태그 이력이 전혀 없어 개인화 기준(최근 카테고리/가격대)이 없으므로, 전체 인기 상품으로 채운다.
+            List<Product> candidates = productRepository.findPopularProductCandidates(
+                    toExcludeParam(excludeProductIds), PageRequest.of(0, RECOMMENDATION_LIMIT));
+            return buildResponse(candidates, Map.of());
+        }
 
         VisitPurpose visitPurpose = visitPurposeRepository.findBySession_SessionId(sessionId).orElse(null);
         List<InteractionLog> interactionLogs = interactionLogRepository.findBySession_SessionId(sessionId);
         String sessionContext = buildSessionContext(visitPurpose, scanLogs, interactionLogs);
 
-        Optional<List<Product>> similarCandidates = findSimilarCandidates(sessionContext, excludeProductIds);
-        if (similarCandidates.isEmpty()) {
-            return fallbackRecommendations(scanLogs, excludeProductIds);
+        TagScanLog mostRecentScan = scanLogs.get(0);
+
+        Optional<List<Product>> vectorCandidates = findSimilarCandidates(sessionContext, excludeProductIds);
+        if (vectorCandidates.isPresent()) {
+            Optional<Map<Long, String>> reasonsByProductId = generateReasons(vectorCandidates.get(), sessionContext);
+            if (reasonsByProductId.isPresent()) {
+                // AI가 선별한 후보가 3개 미만이면, 규칙 완화·인기 상품 순으로 나머지를 채운다(이유는 채워진 만큼만 존재).
+                List<Product> candidates = fillToLimit(vectorCandidates.get(), excludeProductIds, mostRecentScan);
+                return buildResponse(candidates, reasonsByProductId.get());
+            }
         }
-        List<Product> candidates = similarCandidates.get();
 
-        Optional<Map<Long, String>> reasonsByProductId = generateReasons(candidates, sessionContext);
-        if (reasonsByProductId.isEmpty()) {
-            return fallbackRecommendations(scanLogs, excludeProductIds);
-        }
-
-        List<RecommendationItem> items = candidates.stream()
-                .map(product -> new RecommendationItem(
-                        product.getProductId(),
-                        product.getName(),
-                        reasonsByProductId.get().get(product.getProductId())))
-                .toList();
-
-        return new RecommendationsResponse(items);
+        // 임베딩/이유 생성이 불가능하거나 실패하면, AI 후보는 신뢰하지 않고 규칙 기반(카테고리+가격대 → 완화 → 인기)으로만 채운다.
+        List<Product> candidates = fillToLimit(List.of(), excludeProductIds, mostRecentScan);
+        return buildResponse(candidates, Map.of());
     }
 
     // 세션 벡터를 생성하고, 이미 태그된 제품을 제외한 임베딩 보유 제품들과 코사인 유사도를 계산해 상위 N개를 고른다.
@@ -139,29 +144,53 @@ public class RecommendationService {
         return Optional.of(topCandidates);
     }
 
-    // 임베딩/LLM 호출이 실패했을 때 쓰는 안전망: 기존 카테고리+가격대(±30%) 규칙으로 후보를 추리고 이유 없이 반환한다.
-    private RecommendationsResponse fallbackRecommendations(List<TagScanLog> scanLogs, Set<Long> excludeProductIds) {
-        Sku recentSku = scanLogs.get(0).getSku();
+    // seed(있으면 AI가 고른 후보)를 시작으로, 부족한 만큼 카테고리+가격대 규칙 → 가격대 완화 → 전체 인기 상품 순으로 채운다.
+    // 각 단계는 이전 단계에서 고른 후보와 이미 태그된 제품을 제외하며, 어느 단계에서도 부족분만큼만 조회한다.
+    private List<Product> fillToLimit(List<Product> seed, Set<Long> excludeProductIds, TagScanLog mostRecentScan) {
+        List<Product> result = new ArrayList<>(seed);
+        if (result.size() >= RECOMMENDATION_LIMIT) {
+            return result;
+        }
+
+        Set<Long> seen = new LinkedHashSet<>(excludeProductIds);
+        seed.forEach(product -> seen.add(product.getProductId()));
+
+        Sku recentSku = mostRecentScan.getSku();
         Product recentProduct = recentSku.getProduct();
+        int referencePrice = recentSku.getPrice() != null ? recentSku.getPrice() : 0;
+        int minPrice = (int) (referencePrice * (1 - PRICE_BAND_RATIO));
+        int maxPrice = (int) (referencePrice * (1 + PRICE_BAND_RATIO));
 
-        Integer referencePrice = recentSku.getPrice();
-        int minPrice = referencePrice != null ? (int) (referencePrice * (1 - PRICE_BAND_RATIO)) : 0;
-        int maxPrice = referencePrice != null ? (int) (referencePrice * (1 + PRICE_BAND_RATIO)) : Integer.MAX_VALUE;
+        appendUnseen(result, seen, productRepository.findRecommendationCandidates(
+                recentProduct.getCategory(), toExcludeParam(seen), minPrice, maxPrice, referencePrice,
+                PageRequest.of(0, RECOMMENDATION_LIMIT - result.size())));
 
-        List<Product> candidates = productRepository.findRecommendationCandidates(
-                recentProduct.getCategory(),
-                excludeProductIds.stream().toList(),
-                minPrice,
-                maxPrice,
-                referencePrice != null ? referencePrice : 0,
-                PageRequest.of(0, RECOMMENDATION_LIMIT)
-        );
+        if (result.size() < RECOMMENDATION_LIMIT) {
+            appendUnseen(result, seen, productRepository.findRecommendationCandidates(
+                    recentProduct.getCategory(), toExcludeParam(seen), 0, Integer.MAX_VALUE, referencePrice,
+                    PageRequest.of(0, RECOMMENDATION_LIMIT - result.size())));
+        }
 
-        List<RecommendationItem> items = candidates.stream()
-                .map(product -> new RecommendationItem(product.getProductId(), product.getName(), null))
-                .toList();
+        if (result.size() < RECOMMENDATION_LIMIT) {
+            appendUnseen(result, seen, productRepository.findPopularProductCandidates(
+                    toExcludeParam(seen), PageRequest.of(0, RECOMMENDATION_LIMIT - result.size())));
+        }
 
-        return new RecommendationsResponse(items);
+        return result;
+    }
+
+    private void appendUnseen(List<Product> result, Set<Long> seen, List<Product> newCandidates) {
+        for (Product candidate : newCandidates) {
+            if (seen.add(candidate.getProductId())) {
+                result.add(candidate);
+            }
+        }
+    }
+
+    // 네이티브 쿼리의 NOT IN(:excludeProductIds)에 빈 컬렉션을 바인딩하면 SQL 문법 오류가 나므로,
+    // 존재할 수 없는 ID(0)로 대체해 "제외할 것이 없다"를 표현한다.
+    private List<Long> toExcludeParam(Set<Long> excludeProductIds) {
+        return excludeProductIds.isEmpty() ? List.of(NO_EXCLUSION_SENTINEL_ID) : List.copyOf(excludeProductIds);
     }
 
     // AI가 아닌 순수 텍스트 조합: 방문 목적 + 태그한 제품명 + interaction_log 기반 관심사를 한 문장으로 합친다.
@@ -263,6 +292,30 @@ public class RecommendationService {
             }
         }
         return reasons;
+    }
+
+    // 후보 상품마다 대표 SKU(최소 SKU ID)와 그 SKU의 대표 이미지(PRODUCT 샷, position 오름차순 첫 장)를 붙여 응답을 만든다.
+    private RecommendationsResponse buildResponse(List<Product> candidates, Map<Long, String> reasonsByProductId) {
+        List<RecommendationItem> items = candidates.stream()
+                .map(product -> toRecommendationItem(product, reasonsByProductId.get(product.getProductId())))
+                .toList();
+        return RecommendationsResponse.of(items);
+    }
+
+    private RecommendationItem toRecommendationItem(Product product, String reason) {
+        Optional<Sku> representativeSku =
+                skuRepository.findByProduct_ProductIdOrderBySkuAsc(product.getProductId()).stream().findFirst();
+
+        Long skuId = representativeSku.map(Sku::getSku).orElse(null);
+        String imageUrl = representativeSku
+                .map(Sku::getStyleNumber)
+                .flatMap(styleNumber ->
+                        skuImageRepository.findFirstByStyleNumberAndShotTypeOrderByPositionAsc(
+                                styleNumber, ShotType.PRODUCT))
+                .map(skuImage -> skuImage.getImageUrl())
+                .orElse(null);
+
+        return new RecommendationItem(product.getProductId(), skuId, product.getName(), imageUrl, reason);
     }
 
     private record CandidatePromptItem(Long productId, String name, String category) {

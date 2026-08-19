@@ -65,6 +65,9 @@ public class PendingAction extends BaseEntity {
     @Column(name = "trigger_id", length = 20)
     private String triggerId;
 
+    @Column(name = "tier")
+    private Integer tier;
+
     @Column(name = "popup_title", length = 200, nullable = false)
     private String popupTitle;
 
@@ -85,7 +88,7 @@ public class PendingAction extends BaseEntity {
     @Builder
     public PendingAction(
             Session session, BlockerType blockerType, Product product, StaffCall staffCall,
-            TagScanLog triggerTagScanLog, InteractionLog triggerInteractionLog, String triggerId,
+            TagScanLog triggerTagScanLog, InteractionLog triggerInteractionLog, String triggerId,Integer tier,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
         this.session = session;
@@ -95,6 +98,7 @@ public class PendingAction extends BaseEntity {
         this.triggerTagScanLog = triggerTagScanLog;
         this.triggerInteractionLog = triggerInteractionLog;
         this.triggerId = triggerId;
+        this.tier = tier;
         this.popupTitle = popupTitle;
         this.popupBody = popupBody;
         this.options = options;
