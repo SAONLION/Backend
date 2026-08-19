@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Backfill the 10 sku columns added by V18__sku_catalog_detail_fields.sql
-(description, short_description, body_material, trim_material, country_of_origin,
-dimensions_text, storage_text, lining_care_text, strap_length, handle_drop) from
+"""Backfill the 12 sku columns added by V18__sku_catalog_detail_fields.sql and
+V19__sku_hardware_sustainability.sql (description, short_description, body_material,
+trim_material, country_of_origin, dimensions_text, storage_text, lining_care_text,
+strap_length, handle_drop, hardware_text, sustainability_certification) from
 final_backdata/data/catalog.sqlite's products table, matched by style_number.
 
-Context: scripts/load_products.py already computes these same 10 fields when it does a
+Context: scripts/load_products.py already computes these same 12 fields when it does a
 fresh --truncate load (see its module docstring / extract_material / extract_dimensions_text
 / extract_feature_sentences / extract_attribute helpers, written for the P2-4/P2-5/P2-8 API
 field additions). This script reuses those exact functions (imported from load_products.py,
@@ -13,7 +14,7 @@ touching anything else about those rows.
 
 This script is intentionally narrow and non-destructive, same principles as
 scripts/backfill_sku_size.py:
-  - Only UPDATEs the 10 columns listed above -- never INSERT/DELETE/TRUNCATE.
+  - Only UPDATEs the 12 columns listed above -- never INSERT/DELETE/TRUNCATE.
   - Only touches a given column on a given row when it is NULL/'' there; a column that
     already has a value is never overwritten.
   - Matches on style_number.
@@ -53,6 +54,8 @@ TARGET_COLUMNS = [
     "lining_care_text",
     "strap_length",
     "handle_drop",
+    "hardware_text",
+    "sustainability_certification",
 ]
 
 
@@ -100,6 +103,10 @@ def compute_source_values(product_row: dict) -> dict[str, str | None]:
         "lining_care_text": loader.extract_feature_sentences(features_json, ("안감",)),
         "strap_length": loader.extract_attribute(attributes_json, "strap_length"),
         "handle_drop": loader.extract_attribute(attributes_json, "handle_drop"),
+        "hardware_text": loader.extract_feature_sentences(features_json, ("하드웨어",)),
+        "sustainability_certification": loader.extract_attribute(
+            attributes_json, "sustainability_certification"
+        ),
     }
 
 

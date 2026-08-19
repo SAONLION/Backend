@@ -4,4 +4,4 @@ build
 .idea
 *.md
 finale_backdata
-application-local.yaml
+**/application-local.yaml

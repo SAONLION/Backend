@@ -11,9 +11,11 @@ sku_image (loaded separately by scripts/load_sku_image.py) join to a scanned sku
   products (sqlite)         -> sku            (one row per style_number), including
                                 description/short_description/materials_json/dimensions_json/
                                 country_of_origin verbatim, plus features_json filtered by
-                                keyword into storage_text ("포켓"/"수납") and lining_care_text
-                                ("안감"), plus product_attributes_json's strap_length/handle_drop
-                                entries -- see P2-4/P2-5/P2-8 API field additions
+                                keyword into storage_text ("포켓"/"수납"), lining_care_text
+                                ("안감"), and hardware_text ("하드웨어"), plus
+                                product_attributes_json's strap_length/handle_drop/
+                                sustainability_certification entries -- see P2-4/P2-5/P2-8 API
+                                field additions
   product_variants (sqlite) -> sku.color cross-check (products.current_color is used;
                                 both are identical for all 632 rows as of this writing)
   category_products.ndjson  -> product.category (lowest category_position wins)
@@ -211,6 +213,8 @@ def build_sku_rows(products: list[dict], variant_color_by_style: dict[str, str],
             "lining_care_text": extract_feature_sentences(features_json, ("안감",)),
             "strap_length": extract_attribute(attributes_json, "strap_length"),
             "handle_drop": extract_attribute(attributes_json, "handle_drop"),
+            "hardware_text": extract_feature_sentences(features_json, ("하드웨어",)),
+            "sustainability_certification": extract_attribute(attributes_json, "sustainability_certification"),
         })
     if skipped:
         print(f"WARNING: skipped {skipped} sku rows with no matching product group", file=sys.stderr)
@@ -299,15 +303,16 @@ def main() -> int:
                     "INSERT INTO sku (sku, product_id, style_number, color, size, price, stock_qty, "
                     "description, short_description, body_material, trim_material, country_of_origin, "
                     "dimensions_text, storage_text, lining_care_text, strap_length, handle_drop, "
+                    "hardware_text, sustainability_certification, "
                     "created_at, updated_at) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                    "VALUES (%s, %s, %s, %s, %s, %s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
                     "NOW(), NOW())",
                     (
                         sku_id, product_id, row["style_number"], row["color"], row["size"], row["price"],
                         row["description"], row["short_description"], row["body_material"],
                         row["trim_material"], row["country_of_origin"], row["dimensions_text"],
                         row["storage_text"], row["lining_care_text"], row["strap_length"],
-                        row["handle_drop"],
+                        row["handle_drop"], row["hardware_text"], row["sustainability_certification"],
                     ),
                 )
                 inserted_skus += 1

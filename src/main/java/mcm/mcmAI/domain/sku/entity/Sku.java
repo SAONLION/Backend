@@ -73,12 +73,19 @@ public class Sku extends BaseEntity {
     @Column(name = "handle_drop", length = 64)
     private String handleDrop;
 
+    @Column(name = "hardware_text", columnDefinition = "TEXT")
+    private String hardwareText;
+
+    @Column(name = "sustainability_certification", length = 255)
+    private String sustainabilityCertification;
+
     @Builder
     public Sku(
             Long sku, Product product, String color, String size, Integer price, Integer stockQty,
             String styleNumber, String description, String shortDescription, String bodyMaterial,
             String trimMaterial, String countryOfOrigin, String dimensionsText, String storageText,
-            String liningCareText, String strapLength, String handleDrop
+            String liningCareText, String strapLength, String handleDrop, String hardwareText,
+            String sustainabilityCertification
     ) {
         this.sku = sku;
         this.product = product;
@@ -97,5 +104,7 @@ public class Sku extends BaseEntity {
         this.liningCareText = liningCareText;
         this.strapLength = strapLength;
         this.handleDrop = handleDrop;
+        this.hardwareText = hardwareText;
+        this.sustainabilityCertification = sustainabilityCertification;
     }
 }

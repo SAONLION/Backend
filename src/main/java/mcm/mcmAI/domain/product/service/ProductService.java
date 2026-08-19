@@ -157,7 +157,9 @@ public class ProductService {
     private String materialContent(List<Sku> skus) {
         String body = firstNonBlank(skus, Sku::getBodyMaterial);
         String trim = firstNonBlank(skus, Sku::getTrimMaterial);
-        if (body == null && trim == null) {
+        String hardware = firstNonBlank(skus, Sku::getHardwareText);
+        String sustainability = firstNonBlank(skus, Sku::getSustainabilityCertification);
+        if (body == null && trim == null && hardware == null && sustainability == null) {
             return null;
         }
         StringBuilder content = new StringBuilder();
@@ -165,12 +167,22 @@ public class ProductService {
             content.append("바디: ").append(body);
         }
         if (trim != null) {
-            if (content.length() > 0) {
-                content.append('\n');
-            }
-            content.append("트림: ").append(trim);
+            appendLine(content, "트림: " + trim);
+        }
+        if (hardware != null) {
+            appendLine(content, hardware);
+        }
+        if (sustainability != null) {
+            appendLine(content, "지속가능성 인증: " + sustainability);
         }
         return content.toString();
+    }
+
+    private void appendLine(StringBuilder content, String line) {
+        if (content.length() > 0) {
+            content.append('\n');
+        }
+        content.append(line);
     }
 
     private String heritageContent(List<Sku> skus) {
