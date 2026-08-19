@@ -60,23 +60,13 @@ public class PendingActionService {
     // RecommendationService의 ±30% 유사가격대 규칙을 참고해 20% 이상 하락을 임계값으로 삼는다.
     private static final int TIER_CB5_1 = 1;
     private static final double CB5_1_PRICE_DROP_RATIO = 0.2;
-    private static final String CB5_1_POPUP_TITLE = "가격 부담이 있으실까요?";
-    private static final String CB5_1_POPUP_BODY = "조금 더 합리적인 가격대의 제품도 함께 안내해드릴까요?";
-    private static final List<PendingActionOption> CB5_1_OPTIONS = List.of(
-            new PendingActionOption("recommend_alt", "합리적인 가격대 제품 추천받기", ActionNextStep.SHOW_RECOMMENDATIONS),
-            new PendingActionOption("ask_staff", "직원에게 상담받기", ActionNextStep.STAFF_CALL_CREATED)
-    );
+    private static final String CB5_1_POPUP_BODY = null;
 
     private static final String TRIGGER_ID_CB5_2 = "T-CB5-2";
     private static final int TIER_CB5_2 = 2;
     private static final long CB5_2_IDLE_THRESHOLD_MINUTES = 10;
     private static final List<String> CB5_2_PROMOTION_KEYWORDS = List.of("프로모션", "할인");
-    private static final String CB5_2_POPUP_TITLE = "더 궁금하신 점 있으신가요?";
-    private static final String CB5_2_POPUP_BODY = "가격 안내 이후 새로운 소식이 없으신 것 같아요. 필요하실 때 언제든 말씀해주세요.";
-    private static final List<PendingActionOption> CB5_2_OPTIONS = List.of(
-            new PendingActionOption("ask_staff", "직원에게 문의하기", ActionNextStep.STAFF_CALL_CREATED),
-            new PendingActionOption("recommend_alt", "다른 상품 보기", ActionNextStep.SHOW_RECOMMENDATIONS)
-    );
+    private static final String CB5_2_POPUP_BODY = null;
 
     private static final String TRIGGER_ID_CB6_A = "T-CB6-a";
     private static final int TIER_CB6_A = 2;
@@ -91,19 +81,22 @@ public class PendingActionService {
     private static final int TIER_CB6_C = 2;
     private static final long CB6_C_INACTIVITY_MINUTES = 5;
 
-    private static final String CB6_POPUP_TITLE_FORMAT = "관심있던 %s에 대한 콘텐츠를 받아보시겠어요?";
-    private static final String CB6_POPUP_TITLE_FALLBACK_PRODUCT_NAME = "상품";
     private static final String CB6_POPUP_BODY = null;
-    private static final List<PendingActionOption> CB6_OPTIONS = List.of(
-            new PendingActionOption("show_detail_reason", "네, 불러주세요", ActionNextStep.SHOW_RECOMMENDATIONS),
+
+    // ===== F23-1 통합 개입 화면 계약 (CB5/CB6 → CONTENT_OFFER) =====
+    private static final String F23_1_POPUP_TITLE_FORMAT = "%s, 더 알아보고 싶으신가요?";
+    private static final String F23_1_POPUP_TITLE_FALLBACK_PRODUCT_NAME = "상품";
+    private static final List<PendingActionOption> F23_1_OPTIONS = List.of(
+            new PendingActionOption("ask_price", "가격이 궁금해요", ActionNextStep.SHOW_VALUE_CONTENT),
+            new PendingActionOption("show_detail_reason", "콘텐츠 받을래요", ActionNextStep.CAPTURE_CONTACT),
             new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
     );
 
-    private static String buildCb6PopupTitle(Product product) {
+    private static String buildF23_1PopupTitle(Product product) {
         String productName = (product != null && product.getName() != null)
                 ? product.getName()
-                : CB6_POPUP_TITLE_FALLBACK_PRODUCT_NAME;
-        return String.format(CB6_POPUP_TITLE_FORMAT, productName);
+                : F23_1_POPUP_TITLE_FALLBACK_PRODUCT_NAME;
+        return String.format(F23_1_POPUP_TITLE_FORMAT, productName);
     }
 
     private final PendingActionRepository pendingActionRepository;
@@ -196,7 +189,7 @@ public class PendingActionService {
 
             createCb5Blocker(
                     session, scan.getSku().getProduct(), scan, TRIGGER_ID_CB5_1,TIER_CB5_1,
-                    CB5_1_POPUP_TITLE, CB5_1_POPUP_BODY, CB5_1_OPTIONS
+                    buildF23_1PopupTitle(scan.getSku().getProduct()), CB5_1_POPUP_BODY, F23_1_OPTIONS
             );
         }
     }
@@ -240,7 +233,7 @@ public class PendingActionService {
 
         createCb5Blocker(
                 session, latestPriceDisclosure.getSku().getProduct(), latestPriceDisclosure, TRIGGER_ID_CB5_2,TIER_CB5_2,
-                CB5_2_POPUP_TITLE, CB5_2_POPUP_BODY, CB5_2_OPTIONS
+                buildF23_1PopupTitle(latestPriceDisclosure.getSku().getProduct()), CB5_2_POPUP_BODY, F23_1_OPTIONS
         );
     }
 
@@ -284,7 +277,7 @@ public class PendingActionService {
 
             saveBlocker(
                     session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_A, TIER_CB6_A,
-                    buildCb6PopupTitle(product), CB6_POPUP_BODY, CB6_OPTIONS
+                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, F23_1_OPTIONS
             );
         }
     }
@@ -367,7 +360,7 @@ public class PendingActionService {
 
             saveBlocker(
                     session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_B, TIER_CB6_B,
-                    buildCb6PopupTitle(product), CB6_POPUP_BODY, CB6_OPTIONS
+                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, F23_1_OPTIONS
             );
         }
     }
@@ -414,7 +407,7 @@ public class PendingActionService {
 
             saveBlocker(
                     session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_C, TIER_CB6_C,
-                    buildCb6PopupTitle(product), CB6_POPUP_BODY, CB6_OPTIONS
+                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, F23_1_OPTIONS
             );
         }
     }

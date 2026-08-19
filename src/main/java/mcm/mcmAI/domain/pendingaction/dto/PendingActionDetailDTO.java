@@ -10,8 +10,11 @@ public record PendingActionDetailDTO(
         @Schema(description = "액션 ID", example = "1")
         Long actionId,
 
-        @Schema(description = "블로커 유형", example = "CB5")
+        @Schema(description = "블로커 유형 (프론트 표시용, F23-1 통합 계약)", example = "CONTENT_OFFER")
         String blockerType,
+
+        @Schema(description = "블로커 원문 그룹 (분석용, CB5/CB6 원문 그대로)", example = "CB5")
+        String ruleGroup,
 
         @Schema(description = "트리거 ID", example = "T-CB6-a")
         String triggerId,
@@ -39,6 +42,7 @@ public record PendingActionDetailDTO(
 
         return new PendingActionDetailDTO(
                 pendingAction.getActionId(),
+                pendingAction.getBlockerType().toDisplayType(),
                 pendingAction.getBlockerType().name(),
                 pendingAction.getTriggerId(),
                 pendingAction.getTier(),
