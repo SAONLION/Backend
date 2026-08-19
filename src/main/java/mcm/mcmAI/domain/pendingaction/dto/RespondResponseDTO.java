@@ -6,7 +6,7 @@ import mcm.mcmAI.domain.pendingaction.type.ActionNextStep;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "액션 응답 결과")
-public record RespondResponse(
+public record RespondResponseDTO(
 
         @Schema(description = "액션 ID", example = "1")
         Long actionId,
@@ -21,9 +21,9 @@ public record RespondResponse(
         StockCheckResultDTO result
 ) {
 
-    public static RespondResponse of(
+    public static RespondResponseDTO of(
             Long actionId, String responseKey, ActionNextStep nextStep, StockCheckResultDTO result
     ) {
-        return new RespondResponse(actionId, responseKey, nextStep.name(), result);
+        return new RespondResponseDTO(actionId, responseKey, nextStep.name(), result);
     }
 }

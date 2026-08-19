@@ -6,7 +6,7 @@ import mcm.mcmAI.domain.pendingaction.entity.PendingAction;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "대기 중인 액션(팝업) 조회 응답")
-public record PendingActionResponse(
+public record PendingActionResponseDTO(
 
         @Schema(description = "표시할 팝업 존재 여부", example = "true")
         boolean hasAction,
@@ -15,11 +15,11 @@ public record PendingActionResponse(
         PendingActionDetailDTO action
 ) {
 
-    public static PendingActionResponse of(PendingAction pendingAction) {
-        return new PendingActionResponse(true, PendingActionDetailDTO.from(pendingAction));
+    public static PendingActionResponseDTO of(PendingAction pendingAction) {
+        return new PendingActionResponseDTO(true, PendingActionDetailDTO.from(pendingAction));
     }
 
-    public static PendingActionResponse none() {
-        return new PendingActionResponse(false, null);
+    public static PendingActionResponseDTO none() {
+        return new PendingActionResponseDTO(false, null);
     }
 }

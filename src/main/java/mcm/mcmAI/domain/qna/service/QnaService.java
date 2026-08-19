@@ -1,5 +1,7 @@
 package mcm.mcmAI.domain.qna.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mcm.mcmAI.domain.product.entity.Product;
@@ -34,7 +36,12 @@ public class QnaService {
             안내하세요. 예를 들어 "그건 답변드리기 어려워요" 대신 "정확한 가격은 매장 직원이 바로 확인해드릴 수 \
             있어요! 직원 호출 버튼을 눌러보시겠어요?"처럼 답하세요.
             4. 답변은 반드시 지정된 고객 언어로 작성하세요.
-            5. 다른 설명이나 포맷팅 없이 순수한 답변 텍스트만 출력하세요.""";
+            5. 반드시 다음 JSON 형식으로만 응답하세요: {"answer": string, "resolved": boolean}. 다른 설명이나 \
+            포맷팅 없이 이 JSON만 출력하세요.
+            6. resolved는 컨텍스트 안에서 실질적으로 답변했으면 true로, 직원 상담으로 안내했거나 정보가 부족해 \
+            회피했으면 false로 설정하세요.""";
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final ProductRepository productRepository;
     private final SessionRepository sessionRepository;
@@ -47,14 +54,14 @@ public class QnaService {
         QuestionType questionType = QuestionType.from(request.questionType());
 
         if (questionType == QuestionType.FREE_TEXT) {
-            return QnaResponse.of(answerFreeText(product, session.getLanguage(), requireQuestion(request)));
+            return answerFreeText(product, session.getLanguage(), requireQuestion(request));
         }
 
         if (questionType == QuestionType.SHIPPING_RETURN) {
-            return QnaResponse.of(QnaFixedAnswers.shippingReturnAnswer(session.getLanguage()));
+            return QnaResponse.of(QnaFixedAnswers.shippingReturnAnswer(session.getLanguage()), true);
         }
 
-        return QnaResponse.of(QnaFixedAnswers.fixedAnswer(questionType));
+        return QnaResponse.of(QnaFixedAnswers.fixedAnswer(questionType), true);
     }
 
     private String requireQuestion(QnaRequest request) {
@@ -64,16 +71,33 @@ public class QnaService {
         return request.question();
     }
 
-    private String answerFreeText(Product product, String language, String question) {
+    private QnaResponse answerFreeText(Product product, String language, String question) {
         try {
             String userPrompt = buildUserPrompt(product, language, question);
-            return openAiClient.requestChatCompletion(SYSTEM_PROMPT, userPrompt, false)
-                    .map(String::trim)
-                    .filter(answer -> !answer.isBlank())
-                    .orElseGet(() -> QnaFixedAnswers.freeTextFallbackAnswer(language));
+            return openAiClient.requestChatCompletion(SYSTEM_PROMPT, userPrompt, true)
+                    .map(content -> parseFreeTextResponse(content, language))
+                    .orElseGet(() -> QnaResponse.of(QnaFixedAnswers.freeTextFallbackAnswer(language), false));
         } catch (Exception e) {
             log.warn("자유 질문 답변 생성에 실패해 fallback 답변을 반환합니다: {}", e.getMessage());
-            return QnaFixedAnswers.freeTextFallbackAnswer(language);
+            return QnaResponse.of(QnaFixedAnswers.freeTextFallbackAnswer(language), false);
+        }
+    }
+
+    // resolved가 담긴 JSON 응답을 파싱한다. JSON 형식을 어겼더라도 원문 자체를 답변으로 최대한 살리되,
+    // 그마저 비어 있으면 fallback 답변을 사용한다. 두 경우 모두 resolved는 안전하게 false로 처리한다.
+    private QnaResponse parseFreeTextResponse(String content, String language) {
+        try {
+            JsonNode node = OBJECT_MAPPER.readTree(content);
+            String answer = node.path("answer").asText(null);
+            if (answer == null || answer.isBlank()) {
+                return QnaResponse.of(QnaFixedAnswers.freeTextFallbackAnswer(language), false);
+            }
+            return QnaResponse.of(answer.trim(), node.path("resolved").asBoolean(false));
+        } catch (Exception e) {
+            log.warn("OpenAI 응답 파싱에 실패했습니다: {}", e.getMessage());
+            String rawAnswer = content.trim();
+            return QnaResponse.of(
+                    rawAnswer.isBlank() ? QnaFixedAnswers.freeTextFallbackAnswer(language) : rawAnswer, false);
         }
     }
 

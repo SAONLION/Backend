@@ -7,9 +7,9 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.interactionlog.entity.InteractionLog;
 import mcm.mcmAI.domain.interactionlog.repository.InteractionLogRepository;
-import mcm.mcmAI.domain.pendingaction.dto.PendingActionResponse;
-import mcm.mcmAI.domain.pendingaction.dto.RespondRequest;
-import mcm.mcmAI.domain.pendingaction.dto.RespondResponse;
+import mcm.mcmAI.domain.pendingaction.dto.PendingActionResponseDTO;
+import mcm.mcmAI.domain.pendingaction.dto.RespondRequestDTO;
+import mcm.mcmAI.domain.pendingaction.dto.RespondResponseDTO;
 import mcm.mcmAI.domain.pendingaction.dto.StockCheckResultDTO;
 import mcm.mcmAI.domain.pendingaction.entity.PendingAction;
 import mcm.mcmAI.domain.pendingaction.entity.PendingActionOption;
@@ -116,11 +116,11 @@ public class PendingActionService {
 
 
     @Transactional
-    public PendingActionResponse getPendingAction(String sessionId) {
+    public PendingActionResponseDTO getPendingAction(String sessionId) {
         Session session = findSession(sessionId);
 
         if (session.getEndedAt() != null) {
-            return PendingActionResponse.none();
+            return PendingActionResponseDTO.none();
         }
 
         checkAndCreateCb3Blocker(session);
@@ -132,8 +132,8 @@ public class PendingActionService {
 
         return pendingActionRepository
                 .findFirstBySession_SessionIdAndStatusOrderByCreatedAtDesc(sessionId, PendingActionStatus.PENDING)
-                .map(PendingActionResponse::of)
-                .orElseGet(PendingActionResponse::none);
+                .map(PendingActionResponseDTO::of)
+                .orElseGet(PendingActionResponseDTO::none);
     }
 
     @Transactional
@@ -465,7 +465,7 @@ public class PendingActionService {
     }
 
     @Transactional
-    public RespondResponse respond(Long actionId, RespondRequest request) {
+    public RespondResponseDTO respond(Long actionId, RespondRequestDTO request) {
         PendingAction pendingAction = pendingActionRepository.findById(actionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ACTION_NOT_FOUND));
 
@@ -478,7 +478,7 @@ public class PendingActionService {
                 ? StockCheckResultDTO.dummy()
                 : null;
 
-        return RespondResponse.of(pendingAction.getActionId(), responseKey, nextStep, result);
+        return RespondResponseDTO.of(pendingAction.getActionId(), responseKey, nextStep, result);
     }
 
     private ActionNextStep resolveNextStep(PendingAction pendingAction, String responseKey) {

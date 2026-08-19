@@ -4,11 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import mcm.mcmAI.domain.pendingaction.dto.PendingActionResponse;
+import mcm.mcmAI.domain.pendingaction.dto.PendingActionResponseDTO;
 import mcm.mcmAI.domain.pendingaction.service.PendingActionService;
-import mcm.mcmAI.domain.session.entity.Session;
-import mcm.mcmAI.global.exception.BusinessException;
-import mcm.mcmAI.global.exception.ErrorCode;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,7 +29,7 @@ public class PendingActionController {
                     + "404를 반환한다."
     )
     @GetMapping
-    public PendingActionResponse getPendingAction(
+    public PendingActionResponseDTO getPendingAction(
             @Parameter(description = "세션 ID", example = "550e8400-e29b-41d4-a716-446655440000")
             @RequestParam String sessionId
     ) {

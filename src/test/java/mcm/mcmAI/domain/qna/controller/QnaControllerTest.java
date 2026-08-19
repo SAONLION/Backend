@@ -79,6 +79,19 @@ class QnaControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void 고정_답변_QuestionType은_resolved가_true다() throws Exception {
+        Session session = newSession("ko");
+        Product product = newProduct();
+
+        mockMvc.perform(post("/api/v1/products/{productId}/qna", product.getProductId())
+                        .param("sessionId", session.getSessionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"questionType\": \"CARE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolved").value(true));
+    }
+
+    @Test
     void SHIPPING_RETURN은_세션_language에_따라_다른_답변을_반환한다() throws Exception {
         assertShippingReturnAnswer("ko", QnaFixedAnswers.shippingReturnAnswer("ko"));
         assertShippingReturnAnswer("zh", QnaFixedAnswers.shippingReturnAnswer("zh"));
@@ -87,17 +100,32 @@ class QnaControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void SHIPPING_RETURN은_resolved가_true다() throws Exception {
+        Session session = newSession("ko");
+        Product product = newProduct();
+
+        mockMvc.perform(post("/api/v1/products/{productId}/qna", product.getProductId())
+                        .param("sessionId", session.getSessionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"questionType\": \"SHIPPING_RETURN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolved").value(true));
+    }
+
+    @Test
     void SHIPPING_RETURN은_지원하지_않는_language면_한국어_기본값을_반환한다() throws Exception {
         assertShippingReturnAnswer("fr", QnaFixedAnswers.shippingReturnAnswer("ko"));
     }
 
     @Test
-    void FREE_TEXT는_AI를_호출해서_답변을_반환한다() throws Exception {
+    void FREE_TEXT는_AI를_호출해서_JSON_응답을_파싱해_답변과_resolved를_반환한다() throws Exception {
         Session session = newSession("ko");
         Product product = newProduct();
 
         given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
-                .willReturn(Optional.of("비 오는 날에도 편하게 사용하실 수 있는 소재예요."));
+                .willReturn(Optional.of("""
+                        {"answer": "비 오는 날에도 편하게 사용하실 수 있는 소재예요.", "resolved": true}
+                        """));
 
         String requestBody = """
                 {"questionType": "FREE_TEXT", "question": "비 오는 날 들어도 괜찮을까요?"}
@@ -108,11 +136,35 @@ class QnaControllerTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answer").value("비 오는 날에도 편하게 사용하실 수 있는 소재예요."));
+                .andExpect(jsonPath("$.answer").value("비 오는 날에도 편하게 사용하실 수 있는 소재예요."))
+                .andExpect(jsonPath("$.resolved").value(true));
     }
 
     @Test
-    void FREE_TEXT에서_AI_호출이_실패하면_language별_fallback_답변을_반환한다() throws Exception {
+    void FREE_TEXT는_AI가_직원_상담_안내를_하면_resolved_false를_반환한다() throws Exception {
+        Session session = newSession("ko");
+        Product product = newProduct();
+
+        given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
+                .willReturn(Optional.of("""
+                        {"answer": "정확한 가격은 매장 직원이 바로 확인해드릴 수 있어요!", "resolved": false}
+                        """));
+
+        String requestBody = """
+                {"questionType": "FREE_TEXT", "question": "이거 얼마예요?"}
+                """;
+
+        mockMvc.perform(post("/api/v1/products/{productId}/qna", product.getProductId())
+                        .param("sessionId", session.getSessionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value("정확한 가격은 매장 직원이 바로 확인해드릴 수 있어요!"))
+                .andExpect(jsonPath("$.resolved").value(false));
+    }
+
+    @Test
+    void FREE_TEXT에서_AI_호출이_실패하면_language별_fallback_답변과_resolved_false를_반환한다() throws Exception {
         Session koSession = newSession("ko");
         Product product = newProduct();
 
@@ -128,7 +180,8 @@ class QnaControllerTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answer").value(QnaFixedAnswers.freeTextFallbackAnswer("ko")));
+                .andExpect(jsonPath("$.answer").value(QnaFixedAnswers.freeTextFallbackAnswer("ko")))
+                .andExpect(jsonPath("$.resolved").value(false));
 
         Session enSession = newSession("en");
 
@@ -137,7 +190,52 @@ class QnaControllerTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answer").value(QnaFixedAnswers.freeTextFallbackAnswer("en")));
+                .andExpect(jsonPath("$.answer").value(QnaFixedAnswers.freeTextFallbackAnswer("en")))
+                .andExpect(jsonPath("$.resolved").value(false));
+    }
+
+    @Test
+    void FREE_TEXT에서_AI_응답이_JSON_형식을_어기면_원문을_답변으로_살리고_resolved_false를_반환한다() throws Exception {
+        Session session = newSession("ko");
+        Product product = newProduct();
+
+        given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
+                .willReturn(Optional.of("이건 JSON이 아닌 순수 텍스트 응답이에요."));
+
+        String requestBody = """
+                {"questionType": "FREE_TEXT", "question": "비 오는 날 들어도 괜찮을까요?"}
+                """;
+
+        mockMvc.perform(post("/api/v1/products/{productId}/qna", product.getProductId())
+                        .param("sessionId", session.getSessionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value("이건 JSON이 아닌 순수 텍스트 응답이에요."))
+                .andExpect(jsonPath("$.resolved").value(false));
+    }
+
+    @Test
+    void FREE_TEXT에서_AI_응답에_answer_필드가_없으면_fallback_답변과_resolved_false를_반환한다() throws Exception {
+        Session session = newSession("ko");
+        Product product = newProduct();
+
+        given(openAiClient.requestChatCompletion(anyString(), anyString(), anyBoolean()))
+                .willReturn(Optional.of("""
+                        {"resolved": true}
+                        """));
+
+        String requestBody = """
+                {"questionType": "FREE_TEXT", "question": "비 오는 날 들어도 괜찮을까요?"}
+                """;
+
+        mockMvc.perform(post("/api/v1/products/{productId}/qna", product.getProductId())
+                        .param("sessionId", session.getSessionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value(QnaFixedAnswers.freeTextFallbackAnswer("ko")))
+                .andExpect(jsonPath("$.resolved").value(false));
     }
 
     @Test

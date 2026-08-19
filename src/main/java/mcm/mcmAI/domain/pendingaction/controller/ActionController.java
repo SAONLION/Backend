@@ -5,8 +5,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import mcm.mcmAI.domain.pendingaction.dto.RespondRequest;
-import mcm.mcmAI.domain.pendingaction.dto.RespondResponse;
+import mcm.mcmAI.domain.pendingaction.dto.RespondRequestDTO;
+import mcm.mcmAI.domain.pendingaction.dto.RespondResponseDTO;
 import mcm.mcmAI.domain.pendingaction.service.PendingActionService;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,11 +34,11 @@ public class ActionController {
                     + "반환한다."
     )
     @PostMapping("/{actionId}/respond")
-    public RespondResponse respond(
+    public RespondResponseDTO respond(
             @Parameter(description = "액션 ID", example = "1")
             @PathVariable Long actionId,
 
-            @Valid @RequestBody RespondRequest request
+            @Valid @RequestBody RespondRequestDTO request
     ) {
         return pendingActionService.respond(actionId, request);
     }
