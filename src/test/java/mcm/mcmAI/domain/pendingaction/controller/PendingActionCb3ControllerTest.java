@@ -58,9 +58,9 @@ class PendingActionCb3ControllerTest {
                 .andExpect(jsonPath("$.hasAction").value(true))
                 .andExpect(jsonPath("$.action.blockerType").value("CB3"))
                 .andExpect(jsonPath("$.action.popupTitle").value("직원에게 직접 안내를\n받아보시겠어요?"))
-                .andExpect(jsonPath("$.action.popupBody").value("담당 직원을 우선적으로 호출해드릴까요?"))
+                .andExpect(jsonPath("$.action.popupBody").doesNotExist())
                 .andExpect(jsonPath("$.action.options[0].key").value("escalate_call"))
-                .andExpect(jsonPath("$.action.options[0].label").value("우선 호출 요청"));
+                .andExpect(jsonPath("$.action.options[0].label").value("네, 눌러주세요"));
 
         boolean exists = pendingActionRepository
                 .existsByStaffCall_CallIdAndBlockerType(staffCall.getCallId(), BlockerType.CB3);
