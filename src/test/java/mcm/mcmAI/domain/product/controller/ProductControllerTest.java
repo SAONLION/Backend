@@ -122,6 +122,110 @@ class ProductControllerTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code").value("SESSION_NOT_FOUND"));
     }
 
+    @Test
+    void 태그_스캔_응답의_product에_스캔된_SKU의_description과_shortDescription이_노출된다() throws Exception {
+        Session session = newSession();
+        Product product = newProduct();
+        Sku sku = skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Cognac")
+                .size("LRG")
+                .stockQty(5)
+                .description("우아한 로고 락 클로저가 돋보이는 Tracy 호보 백입니다.")
+                .shortDescription("로고 락 클로저와 나파 가죽 트림이 돋보이는 비세토스 호보 백")
+                .build());
+
+        mockMvc.perform(get("/api/v1/products/tags/{tagId}", sku.getSku())
+                        .param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.description").value("우아한 로고 락 클로저가 돋보이는 Tracy 호보 백입니다."))
+                .andExpect(jsonPath("$.product.shortDescription")
+                        .value("로고 락 클로저와 나파 가죽 트림이 돋보이는 비세토스 호보 백"));
+    }
+
+    @Test
+    void 태그_스캔_응답의_product는_SKU에_description이_없으면_null을_반환한다() throws Exception {
+        Session session = newSession();
+        Product product = newProduct();
+        Sku sku = newSku(product, 5);
+
+        mockMvc.perform(get("/api/v1/products/tags/{tagId}", sku.getSku())
+                        .param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.description").doesNotExist())
+                .andExpect(jsonPath("$.product.shortDescription").doesNotExist());
+    }
+
+    @Test
+    void 허브옵션1_소재는_상품_SKU의_바디_트림_소재를_content로_반환한다() throws Exception {
+        Product product = newProduct();
+        skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Cognac")
+                .bodyMaterial("비세토스 모노그램 캔버스")
+                .trimMaterial("나파 가죽")
+                .build());
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.optionId").value("1"))
+                .andExpect(jsonPath("$.content").value("바디: 비세토스 모노그램 캔버스\n트림: 나파 가죽"));
+    }
+
+    @Test
+    void 허브옵션1_소재는_SKU에_소재_정보가_없으면_content가_null이다() throws Exception {
+        Product product = newProduct();
+        newSku(product, 5);
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").doesNotExist());
+    }
+
+    @Test
+    void 허브옵션4_원산지는_상품_SKU의_country_of_origin을_content로_반환한다() throws Exception {
+        Product product = newProduct();
+        skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Black")
+                .countryOfOrigin("대한민국")
+                .build());
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("대한민국"));
+    }
+
+    @Test
+    void 허브옵션6_컬러옵션은_상품에_속한_SKU들의_color_목록을_content로_반환한다() throws Exception {
+        Product product = newProduct();
+        skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet()).product(product).color("Black").build());
+        skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet()).product(product).color("Cognac").build());
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "6"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("Black, Cognac"));
+    }
+
+    @Test
+    void 허브옵션7과_8은_기존_고정_안내문을_그대로_반환한다() throws Exception {
+        Product product = newProduct();
+        newSku(product, 5);
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("유사한 다른 제품과 비교 정보를 안내해드려요."));
+
+        mockMvc.perform(get("/api/v1/products/{productId}/hub/options/{optionId}", product.getProductId(), "8"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("함께 매치하기 좋은 스타일링을 추천해드려요."));
+    }
+
     private Session newSession() {
         return sessionRepository.save(Session.builder()
                 .sessionId(UUID.randomUUID().toString())

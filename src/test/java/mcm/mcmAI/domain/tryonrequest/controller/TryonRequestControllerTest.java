@@ -47,7 +47,7 @@ class TryonRequestControllerTest extends AbstractIntegrationTest {
         Sku sku = newSku(newProduct());
 
         String requestBody = """
-                {"sku": %d, "size": "S-M", "color": "베이지"}
+                {"sku": %d}
                 """.formatted(sku.getSku());
 
         mockMvc.perform(post("/api/v1/sessions/{sessionId}/tryon-requests", session.getSessionId())
@@ -56,8 +56,8 @@ class TryonRequestControllerTest extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tryonRequestId").exists())
                 .andExpect(jsonPath("$.sku").value(sku.getSku()))
-                .andExpect(jsonPath("$.size").value("S-M"))
-                .andExpect(jsonPath("$.color").value("베이지"))
+                .andExpect(jsonPath("$.size").value(sku.getSize()))
+                .andExpect(jsonPath("$.color").value(sku.getColor()))
                 .andExpect(jsonPath("$.requestedAt").exists());
     }
 
@@ -67,7 +67,7 @@ class TryonRequestControllerTest extends AbstractIntegrationTest {
 
         mockMvc.perform(post("/api/v1/sessions/{sessionId}/tryon-requests", session.getSessionId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sku\": 999999999, \"size\": \"S-M\", \"color\": \"베이지\"}"))
+                        .content("{\"sku\": 999999999}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("SKU_NOT_FOUND"));
     }
@@ -76,7 +76,7 @@ class TryonRequestControllerTest extends AbstractIntegrationTest {
     void 존재하지_않는_sessionId면_404와_SESSION_NOT_FOUND_코드를_반환한다() throws Exception {
         mockMvc.perform(post("/api/v1/sessions/{sessionId}/tryon-requests", "not-exist-session")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sku\": 1, \"size\": \"S-M\", \"color\": \"베이지\"}"))
+                        .content("{\"sku\": 1}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("SESSION_NOT_FOUND"));
     }

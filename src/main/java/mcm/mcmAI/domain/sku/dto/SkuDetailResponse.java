@@ -17,10 +17,40 @@ public record SkuDetailResponse(
         String size,
 
         @Schema(description = "이미지 URL 목록 (정렬 순서대로)")
-        List<String> images
+        List<String> images,
+
+        @Schema(description = "가로/세로/폭 치수 안내 (값이 없으면 null)", example = "약 11 x 33 x 31 센티미터", nullable = true)
+        String dimensions,
+
+        @Schema(description = "포켓/수납 관련 안내 (값이 없으면 null)", nullable = true)
+        String storage,
+
+        @Schema(description = "스트랩 길이/핸들 드롭 안내 (값이 없으면 null)", nullable = true)
+        String strap
 ) {
 
     public static SkuDetailResponse of(Sku sku, List<String> images) {
-        return new SkuDetailResponse(sku.getSku(), sku.getColor(), sku.getSize(), images);
+        return new SkuDetailResponse(
+                sku.getSku(), sku.getColor(), sku.getSize(), images,
+                sku.getDimensionsText(), sku.getStorageText(), strapOf(sku)
+        );
+    }
+
+    private static String strapOf(Sku sku) {
+        String strapLength = sku.getStrapLength();
+        String handleDrop = sku.getHandleDrop();
+        boolean hasStrapLength = strapLength != null && !strapLength.isBlank();
+        boolean hasHandleDrop = handleDrop != null && !handleDrop.isBlank();
+
+        if (hasStrapLength && hasHandleDrop) {
+            return "스트랩 길이 %s · 핸들 드롭 %s".formatted(strapLength, handleDrop);
+        }
+        if (hasStrapLength) {
+            return "스트랩 길이 %s".formatted(strapLength);
+        }
+        if (hasHandleDrop) {
+            return "핸들 드롭 %s".formatted(handleDrop);
+        }
+        return null;
     }
 }

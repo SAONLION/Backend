@@ -17,7 +17,8 @@ public record HubOptionResponse(
         @Schema(description = "제목", example = "수령 방법 안내")
         String title,
 
-        @Schema(description = "내용", example = "호텔 배송, 공항 수령, 귀국지 배송, 매장 수령 중 선택하실 수 있어요.")
+        @Schema(description = "내용 (optionId 1~6은 상품에 매핑된 원본 데이터가 없으면 null)",
+                example = "호텔 배송, 공항 수령, 귀국지 배송, 매장 수령 중 선택하실 수 있어요.", nullable = true)
         String content,
 
         @Schema(description = "다음 단계", example = "NONE")

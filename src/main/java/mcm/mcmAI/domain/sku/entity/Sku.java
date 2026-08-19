@@ -43,10 +43,42 @@ public class Sku extends BaseEntity {
     @Column(name = "style_number", length = 20)
     private String styleNumber;
 
+    @Column(name = "description", columnDefinition = "LONGTEXT")
+    private String description;
+
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
+
+    @Column(name = "body_material", length = 255)
+    private String bodyMaterial;
+
+    @Column(name = "trim_material", length = 255)
+    private String trimMaterial;
+
+    @Column(name = "country_of_origin", length = 100)
+    private String countryOfOrigin;
+
+    @Column(name = "dimensions_text", length = 255)
+    private String dimensionsText;
+
+    @Column(name = "storage_text", columnDefinition = "TEXT")
+    private String storageText;
+
+    @Column(name = "lining_care_text", columnDefinition = "TEXT")
+    private String liningCareText;
+
+    @Column(name = "strap_length", length = 64)
+    private String strapLength;
+
+    @Column(name = "handle_drop", length = 64)
+    private String handleDrop;
+
     @Builder
     public Sku(
             Long sku, Product product, String color, String size, Integer price, Integer stockQty,
-            String styleNumber
+            String styleNumber, String description, String shortDescription, String bodyMaterial,
+            String trimMaterial, String countryOfOrigin, String dimensionsText, String storageText,
+            String liningCareText, String strapLength, String handleDrop
     ) {
         this.sku = sku;
         this.product = product;
@@ -55,5 +87,15 @@ public class Sku extends BaseEntity {
         this.price = price;
         this.stockQty = stockQty;
         this.styleNumber = styleNumber;
+        this.description = description;
+        this.shortDescription = shortDescription;
+        this.bodyMaterial = bodyMaterial;
+        this.trimMaterial = trimMaterial;
+        this.countryOfOrigin = countryOfOrigin;
+        this.dimensionsText = dimensionsText;
+        this.storageText = storageText;
+        this.liningCareText = liningCareText;
+        this.strapLength = strapLength;
+        this.handleDrop = handleDrop;
     }
 }

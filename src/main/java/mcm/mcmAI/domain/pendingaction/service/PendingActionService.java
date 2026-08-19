@@ -48,7 +48,7 @@ public class PendingActionService {
     private static final String CB3_POPUP_TITLE = "직원에게 직접 안내를\n받아보시겠어요?";
     private static final String CB3_POPUP_BODY = null;
     private static final List<PendingActionOption> CB3_OPTIONS = List.of(
-            new PendingActionOption("escalate_call", "네, 눌러주세요", ActionNextStep.STAFF_CALL_CREATED),
+            new PendingActionOption("escalate_call", "네, 불러주세요", ActionNextStep.STAFF_CALL_CREATED),
             new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
     );
     private static final String TRIGGER_ID_CB3_1 = "T-CB3-1";

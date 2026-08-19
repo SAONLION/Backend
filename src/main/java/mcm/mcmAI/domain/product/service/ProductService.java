@@ -1,6 +1,11 @@
 package mcm.mcmAI.domain.product.service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.pendingaction.entity.PendingActionOption;
 import mcm.mcmAI.domain.pendingaction.service.PendingActionService;
@@ -44,6 +49,10 @@ public class ProductService {
             new PendingActionOption("check_other_store", "타매장 재고 확인", ActionNextStep.STOCK_REQUEST_COMPLETED),
             new PendingActionOption("recommend_alt", "대체 제품 추천하기", ActionNextStep.SHOW_RECOMMENDATIONS)
     );
+
+    // optionId 7(다른 제품과 비교), 8(스타일링 추천)은 카탈로그에 매핑 가능한 원본 데이터가 없어
+    // HubOptionDetailProvider의 기존 고정 안내문을 그대로 사용한다(P2-4 스킵 대상).
+    private static final Set<String> PRODUCT_LEVEL_OPTION_IDS = Set.of("1", "2", "3", "4", "5", "6");
 
     private final ProductRepository productRepository;
     private final SkuRepository skuRepository;
@@ -104,7 +113,7 @@ public class ProductService {
 
         tagScanLogService.recordScan(sessionId, sku);
 
-        return ProductTagScanResponseDTO.of(ProductSummaryDTO.of(product, imageUrl), hubOptions);
+        return ProductTagScanResponseDTO.of(ProductSummaryDTO.of(product, sku, imageUrl), hubOptions);
     }
 
     public List<SubOptionDTO> getHubOptions(Long productId, String interestType) {
@@ -116,8 +125,100 @@ public class ProductService {
     public HubOptionResponse getHubOptionDetail(Long productId, String optionId) {
         findProduct(productId);
 
-        return HubOptionDetailProvider.detailOf(optionId)
+        return buildProductLevelDetail(productId, optionId)
+                .or(() -> HubOptionDetailProvider.detailOf(optionId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.OPTION_NOT_FOUND));
+    }
+
+    // optionId 1~6은 스캔 세션과 무관하게 productId만으로 호출되므로(구체적으로 스캔된 SKU/색상을
+    // 알 수 없음) 해당 상품의 SKU 목록 중 각 필드가 채워진 첫 번째 값을 대표값으로 사용한다.
+    // sku.color/size처럼 SKU마다 달라지는 값(5, 6)은 전체 SKU에서 값을 모아 보여준다.
+    private Optional<HubOptionResponse> buildProductLevelDetail(Long productId, String optionId) {
+        if (!PRODUCT_LEVEL_OPTION_IDS.contains(optionId)) {
+            return Optional.empty();
+        }
+
+        List<Sku> skus = skuRepository.findByProduct_ProductIdOrderBySkuAsc(productId);
+        String content = switch (optionId) {
+            case "1" -> materialContent(skus);
+            case "2" -> heritageContent(skus);
+            case "3" -> firstNonBlank(skus, Sku::getLiningCareText);
+            case "4" -> firstNonBlank(skus, Sku::getCountryOfOrigin);
+            case "5" -> sizeGuideContent(skus);
+            case "6" -> colorOptionContent(skus);
+            default -> null;
+        };
+
+        return HubOptionDetailProvider.detailOf(optionId)
+                .map(base -> new HubOptionResponse(
+                        base.optionId(), base.type(), base.title(), content, base.nextStep(), base.pickupMethods()));
+    }
+
+    private String materialContent(List<Sku> skus) {
+        String body = firstNonBlank(skus, Sku::getBodyMaterial);
+        String trim = firstNonBlank(skus, Sku::getTrimMaterial);
+        if (body == null && trim == null) {
+            return null;
+        }
+        StringBuilder content = new StringBuilder();
+        if (body != null) {
+            content.append("바디: ").append(body);
+        }
+        if (trim != null) {
+            if (content.length() > 0) {
+                content.append('\n');
+            }
+            content.append("트림: ").append(trim);
+        }
+        return content.toString();
+    }
+
+    private String heritageContent(List<Sku> skus) {
+        String shortDescription = firstNonBlank(skus, Sku::getShortDescription);
+        String description = firstNonBlank(skus, Sku::getDescription);
+        if (shortDescription == null && description == null) {
+            return null;
+        }
+        StringBuilder content = new StringBuilder();
+        if (shortDescription != null) {
+            content.append(shortDescription);
+        }
+        if (description != null) {
+            if (content.length() > 0) {
+                content.append("\n\n");
+            }
+            content.append(description);
+        }
+        return content.toString();
+    }
+
+    private String sizeGuideContent(List<Sku> skus) {
+        List<String> sizes = skus.stream()
+                .map(Sku::getSize)
+                .filter(Objects::nonNull)
+                .flatMap(size -> Arrays.stream(size.split(",")))
+                .map(String::trim)
+                .filter(size -> !size.isBlank())
+                .distinct()
+                .toList();
+        return sizes.isEmpty() ? null : String.join(", ", sizes);
+    }
+
+    private String colorOptionContent(List<Sku> skus) {
+        List<String> colors = skus.stream()
+                .map(Sku::getColor)
+                .filter(color -> color != null && !color.isBlank())
+                .distinct()
+                .toList();
+        return colors.isEmpty() ? null : String.join(", ", colors);
+    }
+
+    private String firstNonBlank(List<Sku> skus, Function<Sku, String> extractor) {
+        return skus.stream()
+                .map(extractor)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     @Transactional

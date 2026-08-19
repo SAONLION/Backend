@@ -8,7 +8,12 @@ sku.style_number, which import_backdata.py never set. sku.style_number is what l
 sku_image (loaded separately by scripts/load_sku_image.py) join to a scanned sku.
 
   product_groups (sqlite)   -> product        (one row per variant_group_id)
-  products (sqlite)         -> sku            (one row per style_number)
+  products (sqlite)         -> sku            (one row per style_number), including
+                                description/short_description/materials_json/dimensions_json/
+                                country_of_origin verbatim, plus features_json filtered by
+                                keyword into storage_text ("포켓"/"수납") and lining_care_text
+                                ("안감"), plus product_attributes_json's strap_length/handle_drop
+                                entries -- see P2-4/P2-5/P2-8 API field additions
   product_variants (sqlite) -> sku.color cross-check (products.current_color is used;
                                 both are identical for all 632 rows as of this writing)
   category_products.ndjson  -> product.category (lowest category_position wins)
@@ -94,6 +99,41 @@ def format_materials(materials_json: str | None) -> str | None:
     return "\n".join(lines) if lines else None
 
 
+def extract_material(materials_json: str | None, key: str) -> str | None:
+    if not materials_json:
+        return None
+    value = (json.loads(materials_json) or {}).get(key)
+    return value or None
+
+
+def extract_dimensions_text(dimensions_json: str | None) -> str | None:
+    if not dimensions_json:
+        return None
+    text = (json.loads(dimensions_json) or {}).get("text")
+    return text or None
+
+
+def extract_feature_sentences(features_json: str | None, keywords: tuple[str, ...]) -> str | None:
+    """features_json(문장 배열)에서 keywords 중 하나라도 포함된 문장만 골라 이어붙인다.
+    (예: storage -> 포켓/수납, lining care -> 안감). 사이트에서 상품마다 자유 서술한
+    문장을 그대로 옮기는 것이라 구조화된 필드가 없어 키워드 매칭으로 뽑아낸다."""
+    if not features_json:
+        return None
+    features = json.loads(features_json) or []
+    matches = [f for f in features if any(keyword in f for keyword in keywords)]
+    return "; ".join(matches) if matches else None
+
+
+def extract_attribute(product_attributes_json: str | None, attribute_key: str) -> str | None:
+    if not product_attributes_json:
+        return None
+    attributes = json.loads(product_attributes_json) or []
+    for attribute in attributes:
+        if attribute.get("attribute_key") == attribute_key:
+            return attribute.get("value") or None
+    return None
+
+
 def fetch_sqlite_rows(sqlite_path: Path) -> tuple[list[dict], list[dict], list[dict]]:
     connection = sqlite3.connect(str(sqlite_path))
     connection.row_factory = sqlite3.Row
@@ -104,7 +144,9 @@ def fetch_sqlite_rows(sqlite_path: Path) -> tuple[list[dict], list[dict], list[d
         )]
         products = [dict(row) for row in connection.execute(
             "SELECT style_number, variant_group_id, price, current_color, sizes_json, "
-            "materials_json, description, long_description FROM products"
+            "materials_json, description, short_description, long_description, "
+            "features_json, dimensions_json, country_of_origin, product_attributes_json "
+            "FROM products"
         )]
         variants = [dict(row) for row in connection.execute(
             "SELECT variant_group_id, style_number, color FROM product_variants"
@@ -151,12 +193,24 @@ def build_sku_rows(products: list[dict], variant_color_by_style: dict[str, str],
             mismatched_color += 1
         sizes = json.loads(product["sizes_json"] or "[]")
         size_value = ",".join(sizes)[:255] if sizes else None
+        features_json = product.get("features_json")
+        attributes_json = product.get("product_attributes_json")
         rows.append({
             "style_number": style_number,
             "variant_group_id": variant_group_id,
             "color": product.get("current_color"),
             "size": size_value,
             "price": product.get("price"),
+            "description": product.get("description") or product.get("long_description"),
+            "short_description": product.get("short_description"),
+            "body_material": extract_material(product.get("materials_json"), "body"),
+            "trim_material": extract_material(product.get("materials_json"), "trim"),
+            "country_of_origin": product.get("country_of_origin"),
+            "dimensions_text": extract_dimensions_text(product.get("dimensions_json")),
+            "storage_text": extract_feature_sentences(features_json, ("포켓", "수납")),
+            "lining_care_text": extract_feature_sentences(features_json, ("안감",)),
+            "strap_length": extract_attribute(attributes_json, "strap_length"),
+            "handle_drop": extract_attribute(attributes_json, "handle_drop"),
         })
     if skipped:
         print(f"WARNING: skipped {skipped} sku rows with no matching product group", file=sys.stderr)
@@ -243,8 +297,18 @@ def main() -> int:
                 next_sku_id += 1
                 cursor.execute(
                     "INSERT INTO sku (sku, product_id, style_number, color, size, price, stock_qty, "
-                    "created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, NULL, NOW(), NOW())",
-                    (sku_id, product_id, row["style_number"], row["color"], row["size"], row["price"]),
+                    "description, short_description, body_material, trim_material, country_of_origin, "
+                    "dimensions_text, storage_text, lining_care_text, strap_length, handle_drop, "
+                    "created_at, updated_at) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                    "NOW(), NOW())",
+                    (
+                        sku_id, product_id, row["style_number"], row["color"], row["size"], row["price"],
+                        row["description"], row["short_description"], row["body_material"],
+                        row["trim_material"], row["country_of_origin"], row["dimensions_text"],
+                        row["storage_text"], row["lining_care_text"], row["strap_length"],
+                        row["handle_drop"],
+                    ),
                 )
                 inserted_skus += 1
 
