@@ -104,13 +104,13 @@ public class ProductService {
 
     @Transactional
     public ProductTagScanResponseDTO getProductByTag(Long tagId, String sessionId) {
-        Sku sku = skuRepository.findById(tagId)
+        Sku sku = skuRepository.findBySkuAndIsDeletedFalse(tagId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SKU_NOT_FOUND));
 
         Product product = findProduct(sku.getProduct().getProductId());
 
         String imageUrl = skuImageRepository
-                .findFirstByStyleNumberAndShotTypeOrderByPositionAsc(sku.getStyleNumber(), ShotType.PRODUCT)
+                .findFirstByStyleNumberAndShotTypeAndIsDeletedFalseOrderByPositionAsc(sku.getStyleNumber(), ShotType.PRODUCT)
                 .map(SkuImage::getImageUrl)
                 .orElse(null);
 
@@ -144,7 +144,7 @@ public class ProductService {
             return Optional.empty();
         }
 
-        List<Sku> skus = skuRepository.findByProduct_ProductIdOrderBySkuAsc(productId);
+        List<Sku> skus = skuRepository.findByProduct_ProductIdAndIsDeletedFalseOrderBySkuAsc(productId);
         List<Sku> targetSkus = resolveTargetSkus(skus, optionId, skuId);
         String content = switch (optionId) {
             case "1" -> materialContent(targetSkus);
@@ -266,7 +266,7 @@ public class ProductService {
         Session session = findSession(sessionId);
         PickupMethod.from(request.pickupMethod());
 
-        Sku sku = skuRepository.findById(request.skuId())
+        Sku sku = skuRepository.findBySkuAndIsDeletedFalse(request.skuId())
                 .filter(found -> found.getProduct().getProductId().equals(productId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.SKU_NOT_FOUND));
 

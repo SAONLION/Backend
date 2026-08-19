@@ -42,6 +42,9 @@ public class SkuImage extends BaseEntity {
     @Column(name = "has_person", nullable = false)
     private boolean hasPerson;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted;
+
     @Builder
     public SkuImage(String styleNumber, Integer position, String imageUrl, ShotType shotType, boolean hasPerson) {
         this.styleNumber = styleNumber;

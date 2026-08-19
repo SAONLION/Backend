@@ -149,7 +149,7 @@ public class JourneyCardService {
                 .map(representativeStyleByProduct::get)
                 .toList();
 
-        Map<String, List<SkuImage>> imagesByStyle = skuImageRepository.findByStyleNumberIn(rankedStyleNumbers).stream()
+        Map<String, List<SkuImage>> imagesByStyle = skuImageRepository.findByStyleNumberInAndIsDeletedFalse(rankedStyleNumbers).stream()
                 .collect(Collectors.groupingBy(SkuImage::getStyleNumber));
 
         List<CollageImageResponse> collageImages = new ArrayList<>();

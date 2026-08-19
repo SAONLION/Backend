@@ -29,14 +29,14 @@ public class SkuService {
     public List<SkuListItemResponse> getSkus(Long productId) {
         ensureProductExists(productId);
 
-        List<Sku> skus = skuRepository.findByProduct_ProductIdOrderBySkuAsc(productId);
+        List<Sku> skus = skuRepository.findByProduct_ProductIdAndIsDeletedFalseOrderBySkuAsc(productId);
 
         List<String> styleNumbers = skus.stream()
                 .map(Sku::getStyleNumber)
                 .filter(styleNumber -> styleNumber != null)
                 .toList();
 
-        Map<String, List<SkuImage>> imagesByStyle = skuImageRepository.findByStyleNumberIn(styleNumbers).stream()
+        Map<String, List<SkuImage>> imagesByStyle = skuImageRepository.findByStyleNumberInAndIsDeletedFalse(styleNumbers).stream()
                 .collect(Collectors.groupingBy(SkuImage::getStyleNumber));
 
         return skus.stream()
@@ -48,14 +48,14 @@ public class SkuService {
     public SkuDetailResponse getSkuDetail(Long productId, Long skuId) {
         ensureProductExists(productId);
 
-        Sku sku = skuRepository.findById(skuId)
+        Sku sku = skuRepository.findBySkuAndIsDeletedFalse(skuId)
                 .filter(found -> found.getProduct().getProductId().equals(productId))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "SKU를 찾을 수 없습니다: " + skuId));
 
         List<String> images = sku.getStyleNumber() == null
                 ? List.of()
-                : skuImageRepository.findByStyleNumberOrderByPositionAsc(sku.getStyleNumber()).stream()
+                : skuImageRepository.findByStyleNumberAndIsDeletedFalseOrderByPositionAsc(sku.getStyleNumber()).stream()
                         .map(SkuImage::getImageUrl)
                         .toList();
 

@@ -9,10 +9,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SkuImageRepository extends JpaRepository<SkuImage, Long> {
 
-    List<SkuImage> findByStyleNumberIn(List<String> styleNumbers);
+    List<SkuImage> findByStyleNumberInAndIsDeletedFalse(List<String> styleNumbers);
 
-    List<SkuImage> findByStyleNumberOrderByPositionAsc(String styleNumber);
+    List<SkuImage> findByStyleNumberAndIsDeletedFalseOrderByPositionAsc(String styleNumber);
 
-    Optional<SkuImage> findFirstByStyleNumberAndShotTypeOrderByPositionAsc(
+    Optional<SkuImage> findFirstByStyleNumberAndShotTypeAndIsDeletedFalseOrderByPositionAsc(
             String styleNumber, ShotType shotType);
 }

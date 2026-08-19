@@ -304,13 +304,14 @@ public class RecommendationService {
 
     private RecommendationItem toRecommendationItem(Product product, String reason) {
         Optional<Sku> representativeSku =
-                skuRepository.findByProduct_ProductIdOrderBySkuAsc(product.getProductId()).stream().findFirst();
+                skuRepository.findByProduct_ProductIdAndIsDeletedFalseOrderBySkuAsc(product.getProductId())
+                        .stream().findFirst();
 
         Long skuId = representativeSku.map(Sku::getSku).orElse(null);
         String imageUrl = representativeSku
                 .map(Sku::getStyleNumber)
                 .flatMap(styleNumber ->
-                        skuImageRepository.findFirstByStyleNumberAndShotTypeOrderByPositionAsc(
+                        skuImageRepository.findFirstByStyleNumberAndShotTypeAndIsDeletedFalseOrderByPositionAsc(
                                 styleNumber, ShotType.PRODUCT))
                 .map(skuImage -> skuImage.getImageUrl())
                 .orElse(null);

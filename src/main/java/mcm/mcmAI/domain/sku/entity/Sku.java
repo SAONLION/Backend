@@ -79,6 +79,9 @@ public class Sku extends BaseEntity {
     @Column(name = "sustainability_certification", length = 255)
     private String sustainabilityCertification;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted;
+
     @Builder
     public Sku(
             Long sku, Product product, String color, String size, Integer price, Integer stockQty,

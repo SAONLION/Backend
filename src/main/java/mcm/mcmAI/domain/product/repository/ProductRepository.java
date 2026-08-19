@@ -20,7 +20,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             JOIN (
                 SELECT product_id, MIN(price) AS min_price
                 FROM sku
-                WHERE price IS NOT NULL
+                WHERE price IS NOT NULL AND is_deleted = FALSE
                 GROUP BY product_id
             ) sp ON sp.product_id = p.product_id
             WHERE p.category = :category
@@ -48,6 +48,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                 GROUP BY s.product_id
             ) sc ON sc.product_id = p.product_id
             WHERE p.product_id NOT IN (:excludeProductIds)
+              AND EXISTS (
+                  SELECT 1 FROM sku s2 WHERE s2.product_id = p.product_id AND s2.is_deleted = FALSE
+              )
             ORDER BY COALESCE(sc.scan_count, 0) DESC, p.product_id ASC
             """, nativeQuery = true)
     List<Product> findPopularProductCandidates(
