@@ -24,4 +24,8 @@ public interface SkuRepository extends JpaRepository<Sku, Long> {
             LIMIT 1
             """, nativeQuery = true)
     Optional<Sku> findRandomActiveByCategory(@Param("category") String category);
+
+    // product.category로 분류하기 위해 product를 함께 조회한다(N+1 방지).
+    @Query("SELECT s FROM Sku s JOIN FETCH s.product WHERE s.isDeleted = FALSE")
+    List<Sku> findAllActiveWithProduct();
 }
