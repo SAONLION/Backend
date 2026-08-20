@@ -1,3 +1,5 @@
+<img width="1920" height="1080" alt="표지" src="https://github.com/user-attachments/assets/cc223dfd-9bbd-4946-9bab-75d971bfe687" />
+
 # TagOn AI · Backend
 
 > 명품 매장에 부착된 NFC 태그를 스캔하면 시작되는, AI 기반 매장 컨시어지 서비스의 백엔드입니다.
