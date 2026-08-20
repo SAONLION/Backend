@@ -85,20 +85,25 @@ public class RecommendationService {
         List<InteractionLog> interactionLogs = interactionLogRepository.findBySession_SessionId(sessionId);
         String sessionContext = buildSessionContext(visitPurpose, scanLogs, interactionLogs);
 
-        TagScanLog mostRecentScan = scanLogs.get(0);
+        // 태그 스캔 이후 해당 SKU의 상품이 카탈로그에서 삭제(단종/오삭제)됐을 수 있다. 그런 스캔은 규칙
+        // 기반 폴백의 기준(카테고리/가격대)으로 쓸 수 없으므로, 상품이 아직 존재하는 가장 최근 스캔을 찾는다.
+        Optional<TagScanLog> mostRecentResolvableScan = scanLogs.stream()
+                .filter(scanLog -> resolveProduct(scanLog.getSku()).isPresent())
+                .findFirst();
 
         Optional<List<Product>> vectorCandidates = findSimilarCandidates(sessionContext, excludeProductIds);
         if (vectorCandidates.isPresent()) {
             Optional<Map<Long, String>> reasonsByProductId = generateReasons(vectorCandidates.get(), sessionContext);
             if (reasonsByProductId.isPresent()) {
                 // AI가 선별한 후보가 3개 미만이면, 규칙 완화·인기 상품 순으로 나머지를 채운다(이유는 채워진 만큼만 존재).
-                List<Product> candidates = fillToLimit(vectorCandidates.get(), excludeProductIds, mostRecentScan);
+                List<Product> candidates =
+                        fillToLimit(vectorCandidates.get(), excludeProductIds, mostRecentResolvableScan);
                 return buildResponse(candidates, reasonsByProductId.get());
             }
         }
 
         // 임베딩/이유 생성이 불가능하거나 실패하면, AI 후보는 신뢰하지 않고 규칙 기반(카테고리+가격대 → 완화 → 인기)으로만 채운다.
-        List<Product> candidates = fillToLimit(List.of(), excludeProductIds, mostRecentScan);
+        List<Product> candidates = fillToLimit(List.of(), excludeProductIds, mostRecentResolvableScan);
         return buildResponse(candidates, Map.of());
     }
 
@@ -146,7 +151,10 @@ public class RecommendationService {
 
     // seed(있으면 AI가 고른 후보)를 시작으로, 부족한 만큼 카테고리+가격대 규칙 → 가격대 완화 → 전체 인기 상품 순으로 채운다.
     // 각 단계는 이전 단계에서 고른 후보와 이미 태그된 제품을 제외하며, 어느 단계에서도 부족분만큼만 조회한다.
-    private List<Product> fillToLimit(List<Product> seed, Set<Long> excludeProductIds, TagScanLog mostRecentScan) {
+    // mostRecentResolvableScan이 비어 있으면(모든 스캔의 상품이 삭제됨) 카테고리+가격대 규칙 단계 없이 인기 상품으로 채운다.
+    private List<Product> fillToLimit(
+            List<Product> seed, Set<Long> excludeProductIds, Optional<TagScanLog> mostRecentResolvableScan
+    ) {
         List<Product> result = new ArrayList<>(seed);
         if (result.size() >= RECOMMENDATION_LIMIT) {
             return result;
@@ -155,20 +163,23 @@ public class RecommendationService {
         Set<Long> seen = new LinkedHashSet<>(excludeProductIds);
         seed.forEach(product -> seen.add(product.getProductId()));
 
-        Sku recentSku = mostRecentScan.getSku();
-        Product recentProduct = recentSku.getProduct();
-        int referencePrice = recentSku.getPrice() != null ? recentSku.getPrice() : 0;
-        int minPrice = (int) (referencePrice * (1 - PRICE_BAND_RATIO));
-        int maxPrice = (int) (referencePrice * (1 + PRICE_BAND_RATIO));
+        if (mostRecentResolvableScan.isPresent()) {
+            Sku recentSku = mostRecentResolvableScan.get().getSku();
+            // 위 필터에서 이미 존재를 확인했으므로 항상 값이 있다.
+            Product recentProduct = resolveProduct(recentSku).orElseThrow();
+            int referencePrice = recentSku.getPrice() != null ? recentSku.getPrice() : 0;
+            int minPrice = (int) (referencePrice * (1 - PRICE_BAND_RATIO));
+            int maxPrice = (int) (referencePrice * (1 + PRICE_BAND_RATIO));
 
-        appendUnseen(result, seen, productRepository.findRecommendationCandidates(
-                recentProduct.getCategory(), toExcludeParam(seen), minPrice, maxPrice, referencePrice,
-                PageRequest.of(0, RECOMMENDATION_LIMIT - result.size())));
-
-        if (result.size() < RECOMMENDATION_LIMIT) {
             appendUnseen(result, seen, productRepository.findRecommendationCandidates(
-                    recentProduct.getCategory(), toExcludeParam(seen), 0, Integer.MAX_VALUE, referencePrice,
+                    recentProduct.getCategory(), toExcludeParam(seen), minPrice, maxPrice, referencePrice,
                     PageRequest.of(0, RECOMMENDATION_LIMIT - result.size())));
+
+            if (result.size() < RECOMMENDATION_LIMIT) {
+                appendUnseen(result, seen, productRepository.findRecommendationCandidates(
+                        recentProduct.getCategory(), toExcludeParam(seen), 0, Integer.MAX_VALUE, referencePrice,
+                        PageRequest.of(0, RECOMMENDATION_LIMIT - result.size())));
+            }
         }
 
         if (result.size() < RECOMMENDATION_LIMIT) {
@@ -177,6 +188,14 @@ public class RecommendationService {
         }
 
         return result;
+    }
+
+    // 태그/조회 시점 이후 SKU가 가리키는 상품이 카탈로그에서 삭제됐을 수 있다(단종, 혹은 소프트 삭제
+    // 없이 product 행이 직접 삭제된 경우). Sku.product는 지연 로딩 프록시라 이름/카테고리 등 ID 이외의
+    // 필드에 접근하면 EntityNotFoundException이 발생해 요청 전체가 실패할 수 있으므로, 프록시를 직접
+    // 건드리지 않고 항상 실제 조회로 존재 여부를 확인한다.
+    private Optional<Product> resolveProduct(Sku sku) {
+        return productRepository.findById(sku.getProduct().getProductId());
     }
 
     private void appendUnseen(List<Product> result, Set<Long> seen, List<Product> newCandidates) {
@@ -203,8 +222,11 @@ public class RecommendationService {
             context.append(visitPurpose.getPurposeType().getLabel()).append(" 목적으로 방문했고, ");
         }
 
+        // 태그된 SKU의 상품이 이후 삭제됐을 수 있으므로, 아직 카탈로그에 남아 있는 상품명만 맥락에 반영한다.
         String taggedProductNames = scanLogs.stream()
-                .map(scanLog -> scanLog.getSku().getProduct().getName())
+                .map(scanLog -> resolveProduct(scanLog.getSku()))
+                .flatMap(Optional::stream)
+                .map(Product::getName)
                 .distinct()
                 .limit(VIEWED_PRODUCT_CONTEXT_LIMIT)
                 .collect(Collectors.joining(", "));
@@ -233,9 +255,17 @@ public class RecommendationService {
 
         Map<String, Integer> durationByLabel = new LinkedHashMap<>();
         for (InteractionLog interactionLog : interactionLogs) {
-            String label = (interactionLog.getSubOption() != null && !interactionLog.getSubOption().isBlank())
-                    ? interactionLog.getSubOption()
-                    : interactionLog.getSku().getProduct().getName();
+            String label;
+            if (interactionLog.getSubOption() != null && !interactionLog.getSubOption().isBlank()) {
+                label = interactionLog.getSubOption();
+            } else {
+                // subOption이 없으면 상품명을 라벨로 쓰는데, 그 상품이 이후 삭제됐을 수 있으므로 건너뛴다.
+                Optional<Product> product = resolveProduct(interactionLog.getSku());
+                if (product.isEmpty()) {
+                    continue;
+                }
+                label = product.get().getName();
+            }
             int duration = interactionLog.getDurationSeconds() != null ? interactionLog.getDurationSeconds() : 0;
             durationByLabel.merge(label, duration, Integer::sum);
         }
