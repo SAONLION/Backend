@@ -29,7 +29,7 @@
 | **태그 스캔 & 상품 허브** | 태그(SKU) 스캔 시 상품 요약 + 1차 허브(상품이해/핏선호/구매조건/기타) 4종 반환. 하위 옵션(소재/헤리티지/관리·안감/원산지/사이즈/컬러)은 **선택된 SKU 기준**으로 정확한 값만 노출, 없으면 추정하지 않고 null |
 | **AI 자유질문 QnA** | 고객이 자유 텍스트로 질문하면 GPT-4o-mini가 해당 상품의 소재·헤리티지 컨텍스트 안에서만 답변. 가격/재고/할인처럼 민감한 질문은 환각 대신 직원 상담으로 자연스럽게 유도 |
 | **AI 상품 추천** | 세션의 방문 목적·스캔 이력·관심사를 벡터화해 코사인 유사도로 유사 상품 3종을 추천하고, LLM이 추천 이유를 한 문장으로 생성. 실패 시 카테고리+가격대 규칙 → 인기상품 순으로 자동 폴백 |
-| **여정 카드(패스포트)** | 세션이 스캔한 상품들의 관심도(문의/시착/연락처 제공/가격조회/재방문/허브 클릭 등 가중합산)를 계산해 상위 4개를 콜라주 이미지로 구성 |
+| **여정 카드(패스포트)** | 세션이 스캔한 상품들의 관심도(문의/시착/연락처 제공/가격조회/재방문/허브 클릭 등 가중합산)를 계산해 상위 4개를 콜라주 이미지로 구성하고, 가장 많이 태그 스캔한 색상(`favoriteColor`)도 함께 제공 |
 | **선제적 개입 엔진 (Blocker)** | 품절 조회, 직원 호출 미응답, 가격 확인 후 저가 상품으로 이탈, 시착 후 무응답, 재방문·비활성 등 상황별 트리거를 감지해 팝업(CTA)을 자동 생성 |
 | **직원 호출 · 시착 요청 · 구매 문의 · 연락처 수집 · 방문 목적** | 매장 직원과의 연결이 필요한 순간들을 세션 단위로 기록 |
 
@@ -77,6 +77,7 @@ AI 호출(임베딩/챗) 실패가 서비스 장애로 번지지 않도록, AI�
 
 | 트리거 | 조건 | 개입 |
 | --- | --- | --- |
+| **CB1** | 수령방법별 재고 확인 시 재고 없음 | 타매장 재고 확인 / 대체 제품 추천 팝업 |
 | **CB3** | 직원 호출 후 5분 이상 미응답 | 재호출 유도 팝업 |
 | **CB5** | 가격 확인 후 같은 카테고리의 더 낮은 가격대 상품으로 전환, 또는 가격 확인 후 10분간 무활동 | 가격 안내 / 콘텐츠 제안 |
 | **CB6** | 시착 요청 후 15분 경과, 동일 상품 재방문(2회↑ & 체류 3분↑), 상담 종료 후 5분 무활동 | 콘텐츠 제안 |
@@ -90,7 +91,7 @@ AI 호출(임베딩/챗) 실패가 서비스 장애로 번지지 않도록, AI�
 | 영역 | 사용 기술 |
 | --- | --- |
 | Language / Framework | Java 17, Spring Boot 4.1 (Web MVC, Validation, AOP, Actuator) |
-| Database | MySQL 8, Flyway (스키마 버전 관리, 19개 마이그레이션) |
+| Database | MySQL 8, Flyway (스키마 버전 관리, 20개 마이그레이션) |
 | AI | OpenAI API — Chat Completions(`gpt-4o-mini`), Embeddings(`text-embedding-3-small`) |
 | API 문서 | springdoc-openapi (Swagger UI) |
 | 테스트 | JUnit 5, MockMvc, Testcontainers(MySQL) 기반 도메인별 통합 테스트 |
@@ -109,6 +110,7 @@ AI 호출(임베딩/챗) 실패가 서비스 장애로 번지지 않도록, AI�
 | Product | `GET /api/v1/products/tags/{tagId}` | 태그 스캔 → 상품 정보 + 1차 허브 |
 | Product | `GET /api/v1/products/{productId}/hub/options/{optionId}` | 허브 하위 옵션 상세 (소재/헤리티지/사이즈 등, `skuId`로 색상별 정확한 값 조회) |
 | Product | `POST /api/v1/products/{productId}/pickup-check` | 픽업 방식별 재고 확인 |
+| Sku | `GET /api/v1/products/{productId}/skus`, `GET /api/v1/products/{productId}/skus/{skuId}` | 색상별 SKU 목록 / SKU 상세(사이즈·치수·이미지) 조회 |
 | Recommendation | `GET /api/v1/session/recommendations` | AI 유사도 기반 추천 3종 |
 | QnA | `POST /api/v1/products/{productId}/qna` | 상품 기반 AI 자유질문 |
 | JourneyCard | `GET /api/v1/session/journey-card` | 관심도 기반 여정 카드(콜라주) |
@@ -145,6 +147,9 @@ global/
 ├── aop/                # 세션 활성 여부 가드 (@RequiresActiveSession)
 ├── exception/          # 도메인 공통 예외/에러코드
 └── entity/             # BaseEntity(생성/수정 시각)
+
+internal/              # [시연/테스트 전용] app.internal-test-endpoints.enabled=true일 때만 등록
+└── controller/         # 물리 NFC 태그 없이 랜덤 태그 스캔 등, 정식 기능이 아닌 데모용 엔드포인트
 ```
 
 ---
@@ -159,6 +164,7 @@ docker compose up --build
 - 앱: `http://localhost:8080`
 - API 문서: `http://localhost:8080/swagger-ui/index.html`
 - `OPENAI_API_KEY`가 없으면 AI 호출부는 자동으로 규칙 기반 폴백으로 동작합니다(서비스 다운 없음).
+- `APP_INTERNAL_TEST_ENDPOINTS_ENABLED=true`로 설정하면 물리 NFC 태그 없이 시연할 수 있는 `internal/` 테스트 전용 엔드포인트가 등록됩니다(기본값 false).
 
 ### 로컬 테스트
 
