@@ -15,11 +15,8 @@ import mcm.mcmAI.domain.product.dto.HubOptionDTO;
 import mcm.mcmAI.domain.product.dto.HubOptionResponse;
 import mcm.mcmAI.domain.product.dto.PickupCheckRequest;
 import mcm.mcmAI.domain.product.dto.PickupCheckResponse;
-import mcm.mcmAI.domain.product.dto.ProductCreateRequestDTO;
-import mcm.mcmAI.domain.product.dto.ProductResponseDTO;
 import mcm.mcmAI.domain.product.dto.ProductSummaryDTO;
 import mcm.mcmAI.domain.product.dto.ProductTagScanResponseDTO;
-import mcm.mcmAI.domain.product.dto.ProductUpdateRequestDTO;
 import mcm.mcmAI.domain.product.dto.RandomTagResponse;
 import mcm.mcmAI.domain.product.dto.SubOptionDTO;
 import mcm.mcmAI.domain.product.entity.Product;
@@ -67,41 +64,6 @@ public class ProductService {
     private final SessionRepository sessionRepository;
     private final PendingActionService pendingActionService;
 
-
-
-    @Transactional
-    public ProductResponseDTO create(ProductCreateRequestDTO request) {
-        Product product = Product.builder()
-                .name(request.name())
-                .category(request.category())
-                .materialDesc(request.materialDesc())
-                .heritageDesc(request.heritageDesc())
-                .build();
-
-        return ProductResponseDTO.from(productRepository.save(product));
-    }
-
-    public ProductResponseDTO getProduct(Long productId) {
-        return ProductResponseDTO.from(findProduct(productId));
-    }
-
-    public List<ProductResponseDTO> getProducts() {
-        return productRepository.findAll().stream()
-                .map(ProductResponseDTO::from)
-                .toList();
-    }
-
-    @Transactional
-    public ProductResponseDTO update(Long productId, ProductUpdateRequestDTO request) {
-        Product product = findProduct(productId);
-        product.update(request.name(), request.category(), request.materialDesc(), request.heritageDesc());
-        return ProductResponseDTO.from(product);
-    }
-
-    @Transactional
-    public void delete(Long productId) {
-        productRepository.delete(findProduct(productId));
-    }
 
     @Transactional
     public ProductTagScanResponseDTO getProductByTag(Long tagId, String sessionId) {
