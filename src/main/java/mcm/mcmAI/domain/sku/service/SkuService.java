@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import mcm.mcmAI.domain.product.repository.ProductRepository;
 import mcm.mcmAI.domain.sku.dto.SkuDetailResponse;
+import mcm.mcmAI.domain.sku.dto.SkuImageResponse;
 import mcm.mcmAI.domain.sku.dto.SkuListItemResponse;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.sku.repository.SkuRepository;
@@ -53,10 +54,10 @@ public class SkuService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "SKU를 찾을 수 없습니다: " + skuId));
 
-        List<String> images = sku.getStyleNumber() == null
+        List<SkuImageResponse> images = sku.getStyleNumber() == null
                 ? List.of()
                 : skuImageRepository.findByStyleNumberAndIsDeletedFalseOrderByPositionAsc(sku.getStyleNumber()).stream()
-                        .map(SkuImage::getImageUrl)
+                        .map(SkuImageResponse::of)
                         .toList();
 
         return SkuDetailResponse.of(sku, images);

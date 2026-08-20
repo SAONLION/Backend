@@ -16,8 +16,9 @@ public record SkuDetailResponse(
         @Schema(description = "사이즈(콤마로 구분된 선택 가능 사이즈 목록)", example = "XS,S,M,L,XL")
         String size,
 
-        @Schema(description = "이미지 URL 목록 (정렬 순서대로)")
-        List<String> images,
+        @Schema(description = "이미지 목록 (정렬 순서대로). 모델컷이 없는 SKU는 빈 배열이다. "
+                + "구 버전(images: string[])과 호환되지 않는 응답 구조 변경이다.")
+        List<SkuImageResponse> images,
 
         @Schema(description = "가로/세로/폭 치수 안내 (값이 없으면 null)", example = "약 11 x 33 x 31 센티미터", nullable = true)
         String dimensions,
@@ -29,7 +30,7 @@ public record SkuDetailResponse(
         String strap
 ) {
 
-    public static SkuDetailResponse of(Sku sku, List<String> images) {
+    public static SkuDetailResponse of(Sku sku, List<SkuImageResponse> images) {
         return new SkuDetailResponse(
                 sku.getSku(), sku.getColor(), sku.getSize(), images,
                 sku.getDimensionsText(), sku.getStorageText(), strapOf(sku)

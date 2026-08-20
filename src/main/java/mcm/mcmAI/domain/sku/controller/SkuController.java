@@ -37,7 +37,13 @@ public class SkuController {
     @Operation(
             summary = "SKU 상세 조회",
             description = "특정 SKU의 상세 정보와 이미지 목록을 반환한다. 화면의 사이즈 확인에 사용된다. "
-                    + "가격/재고 정보는 포함하지 않는다."
+                    + "가격/재고 정보는 포함하지 않는다.\n\n"
+                    + "[P2-17] images는 문자열 URL 배열(images: string[])에서 객체 배열로 구조가 바뀌었다 "
+                    + "(images: {url, shotType, hasPerson}[]). shotType은 PRODUCT(제품컷)/MODEL(모델컷) "
+                    + "중 하나이며, 화면에서 제품컷/모델컷을 나누는 기준 필드다. hasPerson은 참고용 보조 필드로 "
+                    + "판별 기준으로 쓰지 않는다. 모델컷이 없는 SKU는 images가 빈 배열이다. 하위 호환을 깨는 "
+                    + "변경이므로, 기존 images: string[]을 그대로 소비하던 프론트는 이 필드를 objects 배열로 "
+                    + "파싱하도록 전환해야 한다(url을 기존 문자열 자리에 사용)."
     )
     @GetMapping("/{skuId}")
     public SkuDetailResponse getSkuDetail(
