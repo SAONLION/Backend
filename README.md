@@ -25,6 +25,8 @@
 ---
 
 ## 2. 핵심 기능
+<img width="1920" height="1080" alt="FLOW (1)" src="https://github.com/user-attachments/assets/731b360b-a2dc-4547-8614-0a2adbfae10a" /> ![Uploading FLOW.png…]()
+
 
 | 기능 | 설명 |
 | --- | --- |
