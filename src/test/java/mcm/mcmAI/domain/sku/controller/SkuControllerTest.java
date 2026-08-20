@@ -82,7 +82,50 @@ class SkuControllerTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dimensions").doesNotExist())
                 .andExpect(jsonPath("$.storage").doesNotExist())
-                .andExpect(jsonPath("$.strap").doesNotExist());
+                .andExpect(jsonPath("$.strap").doesNotExist())
+                .andExpect(jsonPath("$.sizeOptions").isArray())
+                .andExpect(jsonPath("$.sizeOptions").isEmpty());
+    }
+
+    @Test
+    void 사이즈가_하나뿐이면_sizeOptions에_해당_사이즈의_dimensions가_채워진다() throws Exception {
+        Product product = newProduct();
+        Sku sku = skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Cognac")
+                .size("MED")
+                .dimensionsText("약 20 x 45 x 31 센티미터")
+                .build());
+
+        mockMvc.perform(get("/api/v1/products/{productId}/skus/{skuId}", product.getProductId(), sku.getSku()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sizeOptions.length()").value(1))
+                .andExpect(jsonPath("$.sizeOptions[0].code").value("MED"))
+                .andExpect(jsonPath("$.sizeOptions[0].dimensions").value("약 20 x 45 x 31 센티미터"));
+    }
+
+    @Test
+    void 사이즈가_여러_개면_sizeOptions의_dimensions는_모두_null이고_기존_dimensions는_그대로_유지된다() throws Exception {
+        Product product = newProduct();
+        Sku sku = skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Cognac")
+                .size("505C,45C,41C")
+                .dimensionsText("약 17 x 41 x 26 센티미터")
+                .build());
+
+        mockMvc.perform(get("/api/v1/products/{productId}/skus/{skuId}", product.getProductId(), sku.getSku()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dimensions").value("약 17 x 41 x 26 센티미터"))
+                .andExpect(jsonPath("$.sizeOptions.length()").value(3))
+                .andExpect(jsonPath("$.sizeOptions[0].code").value("505C"))
+                .andExpect(jsonPath("$.sizeOptions[0].dimensions").doesNotExist())
+                .andExpect(jsonPath("$.sizeOptions[1].code").value("45C"))
+                .andExpect(jsonPath("$.sizeOptions[1].dimensions").doesNotExist())
+                .andExpect(jsonPath("$.sizeOptions[2].code").value("41C"))
+                .andExpect(jsonPath("$.sizeOptions[2].dimensions").doesNotExist());
     }
 
     private Product newProduct() {
