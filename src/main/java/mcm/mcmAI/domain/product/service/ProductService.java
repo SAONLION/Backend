@@ -20,6 +20,7 @@ import mcm.mcmAI.domain.product.dto.ProductResponseDTO;
 import mcm.mcmAI.domain.product.dto.ProductSummaryDTO;
 import mcm.mcmAI.domain.product.dto.ProductTagScanResponseDTO;
 import mcm.mcmAI.domain.product.dto.ProductUpdateRequestDTO;
+import mcm.mcmAI.domain.product.dto.RandomTagResponse;
 import mcm.mcmAI.domain.product.dto.SubOptionDTO;
 import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.product.repository.ProductRepository;
@@ -119,6 +120,15 @@ public class ProductService {
         tagScanLogService.recordScan(sessionId, sku);
 
         return ProductTagScanResponseDTO.of(ProductSummaryDTO.of(product, sku, imageUrl), hubOptions);
+    }
+
+    // 태그 스캔 로그를 남기지 않는 단순 무작위 선택. 프론트가 반환된 tagId로 scanTag를 호출해야 실제 스캔 기록이 남는다.
+    public RandomTagResponse getRandomTag(String category) {
+        String normalizedCategory = (category == null || category.isBlank()) ? null : category;
+        Long tagId = skuRepository.findRandomActiveByCategory(normalizedCategory)
+                .map(Sku::getSku)
+                .orElse(null);
+        return new RandomTagResponse(tagId);
     }
 
     public List<SubOptionDTO> getHubOptions(Long productId, String interestType) {

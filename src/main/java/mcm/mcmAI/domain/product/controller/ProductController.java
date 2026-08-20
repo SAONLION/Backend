@@ -30,7 +30,7 @@ public class ProductController {
 
     @Operation(
             summary = "태그 스캔",
-            description = "NFC/QR 태그(SKU) 스캔 시 상품 정보와 1차 허브 옵션 4종(PRODUCT_UNDERSTANDING, FIT_PREFERENCE, "
+            description = "NFC(SKU) 스캔 시 상품 정보와 1차 허브 옵션 4종(PRODUCT_UNDERSTANDING, FIT_PREFERENCE, "
                     + "PURCHASE_CONDITION, OTHER)을 반환한다. 스캔 시점에 tag_scan_log에 세션 기준 스캔 기록을 남긴다."
     )
     @GetMapping("/tags/{tagId}")

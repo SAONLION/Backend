@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -16,6 +17,7 @@ import mcm.mcmAI.domain.contact.repository.ContactRepository;
 import mcm.mcmAI.domain.interactionlog.entity.InteractionLog;
 import mcm.mcmAI.domain.interactionlog.repository.InteractionLogRepository;
 import mcm.mcmAI.domain.journeycard.dto.CollageImageResponse;
+import mcm.mcmAI.domain.journeycard.dto.FavoriteColorResponse;
 import mcm.mcmAI.domain.journeycard.dto.JourneyCardResponse;
 import mcm.mcmAI.domain.product.type.InterestType;
 import mcm.mcmAI.domain.purchaseinquiry.entity.PurchaseInquiry;
@@ -90,7 +92,46 @@ public class JourneyCardService {
                 session.getNickname(),
                 sessionId.substring(0, SESSION_CODE_LENGTH),
                 collageImages,
-                collageImages.size() == TARGET_TOTAL_COUNT
+                collageImages.size() == TARGET_TOTAL_COUNT,
+                buildFavoriteColor(scanLogs)
+        );
+    }
+
+    /**
+     * 세션 안에서 가장 많이 태그 스캔된 색상. 동률이면 가장 최근(scanOrder가 가장 큰) 태그의 색상을 선택한다.
+     * 색상별 고정 코드 체계가 없어 code는 label(Sku.color)을 대문자로 정규화해 생성한다.
+     */
+    private FavoriteColorResponse buildFavoriteColor(List<TagScanLog> scanLogs) {
+        Map<String, Integer> tagCountByColorCode = new LinkedHashMap<>();
+        Map<String, String> labelByColorCode = new LinkedHashMap<>();
+        Map<String, Integer> lastScanOrderByColorCode = new LinkedHashMap<>();
+
+        for (TagScanLog scanLog : scanLogs) {
+            Sku sku = scanLog.getSku();
+            String color = sku == null ? null : sku.getColor();
+            if (color == null || color.isBlank()) {
+                continue;
+            }
+            String colorCode = color.toUpperCase(Locale.ROOT);
+            tagCountByColorCode.merge(colorCode, 1, Integer::sum);
+            labelByColorCode.put(colorCode, color);
+            lastScanOrderByColorCode.put(colorCode, scanLog.getScanOrder());
+        }
+
+        if (tagCountByColorCode.isEmpty()) {
+            return null;
+        }
+
+        String favoriteColorCode = tagCountByColorCode.keySet().stream()
+                .max(Comparator
+                        .<String>comparingInt(tagCountByColorCode::get)
+                        .thenComparing(lastScanOrderByColorCode::get, Comparator.nullsFirst(Comparator.naturalOrder())))
+                .orElseThrow();
+
+        return new FavoriteColorResponse(
+                favoriteColorCode,
+                labelByColorCode.get(favoriteColorCode),
+                tagCountByColorCode.get(favoriteColorCode)
         );
     }
 

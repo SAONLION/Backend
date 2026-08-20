@@ -2,11 +2,13 @@ package mcm.mcmAI.domain.product.controller;
 
 import mcm.mcmAI.support.AbstractIntegrationTest;
 
+import static org.hamcrest.Matchers.in;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import mcm.mcmAI.domain.product.entity.Product;
@@ -271,6 +273,43 @@ class ProductControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void category_없이_요청하면_전체_카탈로그에서_유효한_SKU를_tagId로_반환한다() throws Exception {
+        Sku skuBag = newSku(newProduct("bag"), 5);
+        Sku skuWallet = newSku(newProduct("wallet"), 5);
+
+        mockMvc.perform(get("/api/v1/products/tags/random"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tagId", in(
+                        List.of(skuBag.getSku().intValue(), skuWallet.getSku().intValue()))));
+    }
+
+    @Test
+    void category를_지정하면_해당_카테고리_SKU만_tagId로_반환된다() throws Exception {
+        Sku skuBag = newSku(newProduct("bag"), 5);
+        newSku(newProduct("wallet"), 5);
+
+        mockMvc.perform(get("/api/v1/products/tags/random").param("category", "bag"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tagId").value(skuBag.getSku()));
+    }
+
+    @Test
+    void 조건에_맞는_SKU가_없으면_tagId는_null이고_200을_반환한다() throws Exception {
+        newSku(newProduct("bag"), 5);
+
+        mockMvc.perform(get("/api/v1/products/tags/random").param("category", "no-such-category"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tagId").doesNotExist());
+    }
+
+    @Test
+    void 카테고리_전체에_상품이_없으면_tagId는_null이고_200을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/products/tags/random"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tagId").doesNotExist());
+    }
+
+    @Test
     void 허브옵션7과_8은_기존_고정_안내문을_그대로_반환한다() throws Exception {
         Product product = newProduct();
         newSku(product, 5);
@@ -292,9 +331,13 @@ class ProductControllerTest extends AbstractIntegrationTest {
     }
 
     private Product newProduct() {
+        return newProduct("bag");
+    }
+
+    private Product newProduct(String category) {
         return productRepository.save(Product.builder()
                 .name("테스트 백팩")
-                .category("bag")
+                .category(category)
                 .build());
     }
 

@@ -95,7 +95,51 @@ class JourneyCardControllerTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.sessionCode").value(session.getSessionId().substring(0, 5)))
                 .andExpect(jsonPath("$.collageImages").isArray())
                 .andExpect(jsonPath("$.collageImages").isEmpty())
-                .andExpect(jsonPath("$.isComplete").value(false));
+                .andExpect(jsonPath("$.isComplete").value(false))
+                .andExpect(jsonPath("$.favoriteColor").doesNotExist());
+    }
+
+    @Test
+    void 가장_많이_태그_스캔된_색상이_favoriteColor로_반환된다() throws Exception {
+        Session session = newSession("mingyu");
+
+        // Cognac: 2회 스캔 (styleA + styleB의 재방문), Black: 1회 스캔 -> Cognac이 우세해야 한다.
+        String styleA = newStyleNumber();
+        Sku skuA = newSku(newProduct(), styleA, "Cognac");
+        recordScan(session, skuA, 1);
+
+        String styleBlack = newStyleNumber();
+        Sku skuBlack = newSku(newProduct(), styleBlack, "Black");
+        recordScan(session, skuBlack, 2);
+
+        String styleB = newStyleNumber();
+        Sku skuB = newSku(newProduct(), styleB, "Cognac");
+        recordScan(session, skuB, 3);
+
+        mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.favoriteColor.code").value("COGNAC"))
+                .andExpect(jsonPath("$.favoriteColor.label").value("Cognac"))
+                .andExpect(jsonPath("$.favoriteColor.tagCount").value(2));
+    }
+
+    @Test
+    void 색상별_태그_횟수가_동률이면_가장_최근_태그한_색상이_favoriteColor다() throws Exception {
+        Session session = newSession("mingyu");
+
+        String styleA = newStyleNumber();
+        Sku skuA = newSku(newProduct(), styleA, "Cognac");
+        recordScan(session, skuA, 1);
+
+        String styleBlack = newStyleNumber();
+        Sku skuBlack = newSku(newProduct(), styleBlack, "Black");
+        recordScan(session, skuBlack, 2);
+
+        mockMvc.perform(get("/api/v1/session/journey-card").param("sessionId", session.getSessionId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.favoriteColor.code").value("BLACK"))
+                .andExpect(jsonPath("$.favoriteColor.label").value("Black"))
+                .andExpect(jsonPath("$.favoriteColor.tagCount").value(1));
     }
 
     @Test
@@ -370,10 +414,14 @@ class JourneyCardControllerTest extends AbstractIntegrationTest {
     }
 
     private Sku newSku(Product product, String styleNumber) {
+        return newSku(product, styleNumber, "Cognac");
+    }
+
+    private Sku newSku(Product product, String styleNumber, String color) {
         return skuRepository.save(Sku.builder()
                 .sku(SKU_ID_SEQUENCE.incrementAndGet())
                 .product(product)
-                .color("Cognac")
+                .color(color)
                 .size("ONE")
                 .price(200_000)
                 .stockQty(5)

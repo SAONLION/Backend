@@ -28,7 +28,8 @@ public class JourneyCardController {
                     + "3위 제품은 모델샷을 우선 사용하고(없으면 대체 샷 사용), 4번째 슬롯은 4위 제품의 이미지로 채운다. "
                     + "태그한 제품이 4개 미만이거나 이미지가 부족하면 채울 수 있는 만큼만 채우고 isComplete는 false다. "
                     + "태그 이력이 없으면 collageImages는 빈 배열이다. 세션이 존재하지 않으면 404(SESSION_NOT_FOUND)를 "
-                    + "반환한다."
+                    + "반환한다. favoriteColor는 세션 안에서 가장 많이 태그 스캔된 SKU 색상이며(동률이면 가장 최근 태그 "
+                    + "색상), 태그 이력이 없으면 null이다."
     )
     @GetMapping
     public JourneyCardResponse getJourneyCard(
