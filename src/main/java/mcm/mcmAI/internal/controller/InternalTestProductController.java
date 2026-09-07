@@ -3,10 +3,7 @@ package mcm.mcmAI.internal.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -29,9 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(prefix = "app.internal-test-endpoints", name = "enabled", havingValue = "true")
 public class InternalTestProductController {
 
-    // 시연 첫 턴에 무조건 노출할 대표 상품(비세토스 백팩, bags_all 카테고리)의 SKU(=태그) ID.
-    private static final long FIRST_TURN_TAG_ID = 1L;
-
     private final ProductService productService;
     private final TagScanLogRepository tagScanLogRepository;
     private final SkuRepository skuRepository;
@@ -39,9 +33,7 @@ public class InternalTestProductController {
     @Operation(
             summary = "[테스트 전용] 랜덤 태그 스캔",
             description = "물리 NFC 태그가 아직 없는 시연 환경에서, 카탈로그 전체 SKU 중 하나를 골라 실제 태그 스캔과 "
-                    + "동일하게 처리한다. 세션의 첫 스캔이면 항상 비세토스 백팩(bags_all)이 나오고, 이후에는 "
-                    + "product.category 값에 'bag'이 포함되면 가방, 'wallet'이 포함되면 지갑, 그 외에는 기타로 분류한 "
-                    + "뒤 가방 50% / 지갑 30% / 기타 20% 가중치로 카테고리를 고르고 그 카테고리 안의 모든 SKU 중에서 "
+                    + "동일하게 처리한다. 첫 스캔을 포함해 매번 카테고리 구분 없이 카탈로그 전체 SKU 중에서 완전 "
                     + "무작위로 고른다. 이미 세션에서 태그된(tag_scan_log에 기록된) SKU는 후보에서 제외되며, 카탈로그 "
                     + "전체를 다 태그해 더 고를 후보가 없으면 제외 없이 처음부터 다시 순환한다. 응답 형식과 "
                     + "tag_scan_log 기록은 GET /api/v1/products/tags/{tagId}와 완전히 동일하다. 정식 기능이 아니며 "
@@ -62,80 +54,15 @@ public class InternalTestProductController {
                 .map(scanLog -> scanLog.getSku().getSku())
                 .collect(Collectors.toSet());
 
-        if (usedTagIds.isEmpty()) {
-            return FIRST_TURN_TAG_ID;
-        }
+        List<Long> allTagIds = skuRepository.findAllActiveWithProduct().stream()
+                .map(Sku::getSku)
+                .toList();
 
-        Map<DemoCategory, List<Long>> tagIdsByCategory = loadTagIdsByCategory();
-
-        Map<DemoCategory, List<Long>> remainingByCategory = new EnumMap<>(DemoCategory.class);
-        tagIdsByCategory.forEach((category, tagIds) -> {
-            List<Long> remaining = tagIds.stream().filter(id -> !usedTagIds.contains(id)).toList();
-            if (!remaining.isEmpty()) {
-                remainingByCategory.put(category, remaining);
-            }
-        });
+        List<Long> remaining = allTagIds.stream().filter(id -> !usedTagIds.contains(id)).toList();
 
         // 카탈로그 전체를 다 태그해 더 이상 새로 보여줄 상품이 없으면, 시연이 끊기지 않도록 제외 없이 처음부터 다시 순환한다.
-        if (remainingByCategory.isEmpty()) {
-            remainingByCategory.putAll(tagIdsByCategory);
-        }
+        List<Long> candidates = remaining.isEmpty() ? allTagIds : remaining;
 
-        List<Long> candidates = remainingByCategory.get(pickWeightedCategory(remainingByCategory.keySet()));
         return candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-    }
-
-    // 카탈로그 전체 활성 SKU를 product.category 기준으로 가방/지갑/기타 3버킷으로 분류한다.
-    private Map<DemoCategory, List<Long>> loadTagIdsByCategory() {
-        return skuRepository.findAllActiveWithProduct().stream()
-                .collect(Collectors.groupingBy(
-                        sku -> classify(sku.getProduct().getCategory()),
-                        () -> new EnumMap<>(DemoCategory.class),
-                        Collectors.mapping(Sku::getSku, Collectors.toList())
-                ));
-    }
-
-    private static DemoCategory classify(String category) {
-        if (category == null) {
-            return DemoCategory.OTHER;
-        }
-        String normalized = category.toLowerCase(Locale.ROOT);
-        if (normalized.contains("wallet")) {
-            return DemoCategory.WALLET;
-        }
-        if (normalized.contains("bag")) {
-            return DemoCategory.BAG;
-        }
-        return DemoCategory.OTHER;
-    }
-
-    private DemoCategory pickWeightedCategory(Set<DemoCategory> availableCategories) {
-        int totalWeight = availableCategories.stream().mapToInt(category -> category.weight).sum();
-        int roll = ThreadLocalRandom.current().nextInt(totalWeight);
-
-        int cumulative = 0;
-        for (DemoCategory category : DemoCategory.values()) {
-            if (!availableCategories.contains(category)) {
-                continue;
-            }
-            cumulative += category.weight;
-            if (roll < cumulative) {
-                return category;
-            }
-        }
-        throw new IllegalStateException("가중치 누적 합이 총 가중치에 도달하지 못했습니다.");
-    }
-
-    // 카탈로그 SKU를 노출 비중별로 묶은 카테고리. 가방을 메인으로 두고 가방 50% / 지갑 30% / 기타 20% 가중치를 둔다.
-    private enum DemoCategory {
-        BAG(50),
-        WALLET(30),
-        OTHER(20);
-
-        private final int weight;
-
-        DemoCategory(int weight) {
-            this.weight = weight;
-        }
     }
 }

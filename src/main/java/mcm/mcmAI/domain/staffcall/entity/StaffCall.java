@@ -16,8 +16,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import mcm.mcmAI.domain.product.entity.Product;
 import mcm.mcmAI.domain.session.entity.Session;
+import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.staffcall.type.StaffCallStatus;
 import mcm.mcmAI.global.entity.BaseEntity;
 
@@ -37,8 +37,8 @@ public class StaffCall extends BaseEntity {
     private Session session;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @JoinColumn(name = "sku")
+    private Sku sku;
 
     @Column(name = "reason", length = 200, nullable = false)
     private String reason;
@@ -51,9 +51,9 @@ public class StaffCall extends BaseEntity {
     private LocalDateTime requestedAt;
 
     @Builder
-    public StaffCall(Session session, Product product, String reason) {
+    public StaffCall(Session session, Sku sku, String reason) {
         this.session = session;
-        this.product = product;
+        this.sku = sku;
         this.reason = reason;
         this.status = StaffCallStatus.REQUESTED;
         this.requestedAt = LocalDateTime.now();

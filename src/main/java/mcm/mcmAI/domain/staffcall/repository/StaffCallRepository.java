@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import mcm.mcmAI.domain.staffcall.entity.StaffCall;
 import mcm.mcmAI.domain.staffcall.type.StaffCallStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StaffCallRepository extends JpaRepository<StaffCall, Long> {
@@ -15,4 +16,8 @@ public interface StaffCallRepository extends JpaRepository<StaffCall, Long> {
     List<StaffCall> findBySession_SessionIdAndStatus(String sessionId, StaffCallStatus status);
 
     List<StaffCall> findBySession_SessionIdAndStatusNot(String sessionId, StaffCallStatus status);
+
+    List<StaffCall> findByStatusNotOrderByRequestedAtAsc(StaffCallStatus status);
+
+    List<StaffCall> findByStatusOrderByUpdatedAtDesc(StaffCallStatus status, Pageable pageable);
 }

@@ -30,6 +30,8 @@ spring:
 app:
   internal-test-endpoints:
     enabled: false
+  staff-board:
+    token: ${STAFF_BOARD_TOKEN:}
   api:
     server-url: https://api.tagonai.site
 

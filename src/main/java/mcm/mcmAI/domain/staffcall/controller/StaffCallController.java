@@ -30,10 +30,10 @@ public class StaffCallController {
 
     @Operation(
             summary = "직원 호출 요청",
-            description = "고객이 직원 호출을 요청한다. 고객 측 트리거만 담당하며 SA 응대 화면은 범위 밖이다. "
-                    + "모든 호출은 특정 제품과 연결되어야 하므로 productId 없이는 요청할 수 없다. 세션이 존재하지 "
-                    + "않으면 404(SESSION_NOT_FOUND), productId가 존재하지 않는 제품이면 404(PRODUCT_NOT_FOUND), "
-                    + "productId가 비어있으면 400(MISSING_PRODUCT_ID)을 반환한다."
+            description = "고객이 직원 호출을 요청한다. 고객 측 트리거만 담당한다. "
+                    + "모든 호출은 직전에 스캔/조회한 SKU와 연결되어야 하므로 sku 없이는 요청할 수 없다. 세션이 존재하지 "
+                    + "않으면 404(SESSION_NOT_FOUND), sku가 존재하지 않는 SKU이면 404(SKU_NOT_FOUND), "
+                    + "sku가 비어있으면 400을 반환한다."
     )
     @RequiresActiveSession
     @PostMapping

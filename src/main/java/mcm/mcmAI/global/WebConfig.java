@@ -1,12 +1,25 @@
 package mcm.mcmAI.global;
 
+import lombok.RequiredArgsConstructor;
+import mcm.mcmAI.global.security.StaffBoardTokenInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
+
+    private final StaffBoardTokenInterceptor staffBoardTokenInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(staffBoardTokenInterceptor)
+                .addPathPatterns("/api/v1/staff/**");
+    }
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")

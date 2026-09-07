@@ -1,11 +1,14 @@
 package mcm.mcmAI.domain.staffcall.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import mcm.mcmAI.domain.product.entity.Product;
-import mcm.mcmAI.domain.product.repository.ProductRepository;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
+import mcm.mcmAI.domain.sku.entity.Sku;
+import mcm.mcmAI.domain.sku.repository.SkuRepository;
+import mcm.mcmAI.domain.staffcall.dto.StaffCallBoardItem;
+import mcm.mcmAI.domain.staffcall.dto.StaffCallBoardResponse;
 import mcm.mcmAI.domain.staffcall.dto.StaffCallRequest;
 import mcm.mcmAI.domain.staffcall.dto.StaffCallResponse;
 import mcm.mcmAI.domain.staffcall.dto.StaffCallStatusResponse;
@@ -14,6 +17,7 @@ import mcm.mcmAI.domain.staffcall.repository.StaffCallRepository;
 import mcm.mcmAI.domain.staffcall.type.StaffCallStatus;
 import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,21 +28,18 @@ public class StaffCallService {
 
     private final StaffCallRepository staffCallRepository;
     private final SessionRepository sessionRepository;
-    private final ProductRepository productRepository;
+    private final SkuRepository skuRepository;
 
     @Transactional
     public StaffCallResponse createStaffCall(String sessionId, StaffCallRequest request) {
         Session session = findSession(sessionId);
 
-        Long productId = request.productId();
-        Product product = (productId != null)
-                ? productRepository.findById(productId)
-                  .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND))
-                : null;
+        Sku sku = skuRepository.findBySkuAndIsDeletedFalse(request.sku())
+                .orElseThrow(() -> new BusinessException(ErrorCode.SKU_NOT_FOUND));
 
         StaffCall staffCall = StaffCall.builder()
                 .session(session)
-                .product(product)
+                .sku(sku)
                 .reason(request.reason())
                 .build();
 
@@ -48,6 +49,30 @@ public class StaffCallService {
     public StaffCallStatusResponse getStaffCall(String sessionId, Long callId) {
         StaffCall staffCall = staffCallRepository.findByCallIdAndSession_SessionId(callId, sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
+
+        return StaffCallStatusResponse.from(staffCall);
+    }
+
+    public StaffCallBoardResponse getBoard(int completedLimit) {
+        List<StaffCallBoardItem> waiting = staffCallRepository
+                .findByStatusNotOrderByRequestedAtAsc(StaffCallStatus.COMPLETED).stream()
+                .map(StaffCallBoardItem::from)
+                .toList();
+
+        List<StaffCallBoardItem> completed = staffCallRepository
+                .findByStatusOrderByUpdatedAtDesc(StaffCallStatus.COMPLETED, PageRequest.of(0, completedLimit)).stream()
+                .map(StaffCallBoardItem::from)
+                .toList();
+
+        return new StaffCallBoardResponse(waiting, completed);
+    }
+
+    @Transactional
+    public StaffCallStatusResponse completeStaffCall(Long callId) {
+        StaffCall staffCall = staffCallRepository.findById(callId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
+
+        staffCall.changeStatus(StaffCallStatus.COMPLETED);
 
         return StaffCallStatusResponse.from(staffCall);
     }

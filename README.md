@@ -157,13 +157,14 @@ internal/              # [시연/테스트 전용] app.internal-test-endpoints.e
 ## 8. 실행 방법
 
 ```bash
-# 프로젝트 루트에 .env 파일 생성 (DB_URL, DB_USERNAME, DB_PASSWORD, OPENAI_API_KEY)
+# 프로젝트 루트에 .env 파일 생성 (DB_URL, DB_USERNAME, DB_PASSWORD, OPENAI_API_KEY, STAFF_BOARD_TOKEN)
 docker compose up --build
 ```
 
 - 앱: `http://localhost:8080`
 - API 문서: `http://localhost:8080/swagger-ui/index.html`
 - `OPENAI_API_KEY`가 없으면 AI 호출부는 자동으로 규칙 기반 폴백으로 동작합니다(서비스 다운 없음).
+- `STAFF_BOARD_TOKEN`이 비어 있으면 직원용 태블릿 보드 API(`/api/v1/staff/**`)는 모든 요청을 401로 거부합니다. 태블릿은 `X-Staff-Token` 헤더에 이 값을 실어 보내야 합니다.
 - `APP_INTERNAL_TEST_ENDPOINTS_ENABLED=true`로 설정하면 물리 NFC 태그 없이 시연할 수 있는 `internal/` 테스트 전용 엔드포인트가 등록됩니다(기본값 false).
 
 ### 로컬 테스트

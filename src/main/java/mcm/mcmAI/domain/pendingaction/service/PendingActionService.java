@@ -148,8 +148,9 @@ public class PendingActionService {
                 continue;
             }
 
+            Product product = staffCall.getSku() != null ? staffCall.getSku().getProduct() : null;
             saveBlocker(
-                    session, BlockerType.CB3, staffCall.getProduct(), staffCall, null, null, TRIGGER_ID_CB3_1, TIER_CB3_1,
+                    session, BlockerType.CB3, product, staffCall, null, null, TRIGGER_ID_CB3_1, TIER_CB3_1,
                     CB3_POPUP_TITLE, CB3_POPUP_BODY, CB3_OPTIONS
             );
         }
@@ -379,7 +380,7 @@ public class PendingActionService {
                 continue;
             }
 
-            Product product = call.getProduct();
+            Product product = call.getSku() != null ? call.getSku().getProduct() : null;
             if (product == null) {
                 continue;
             }
