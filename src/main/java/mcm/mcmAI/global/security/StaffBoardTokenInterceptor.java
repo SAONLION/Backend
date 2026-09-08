@@ -20,6 +20,11 @@ public class StaffBoardTokenInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 브라우저가 자동으로 보내는 CORS preflight 요청에는 토큰이 실려있지 않으므로 검사를 건너뛴다.
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
         String providedToken = request.getHeader(TOKEN_HEADER);
 
         if (staffBoardToken == null || staffBoardToken.isBlank() || !staffBoardToken.equals(providedToken)) {
