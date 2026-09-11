@@ -1,9 +1,9 @@
 services:
   app:
     # [로컬] 직접 빌드해서 사용
-    build: .
+    # build: .
     # [EC2] 위 build 대신 아래 image로 교체 (ECR에서 pull, 나중에 필요하면)
-    # image: <계정ID>.dkr.ecr.ap-northeast-2.amazonaws.com/mcmai-app:latest
+    image: 201243087311.dkr.ecr.ap-northeast-2.amazonaws.com/deploy-repository:latest
     platform: linux/amd64
     ports:
       - "8080:8080"
@@ -15,6 +15,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       APP_INTERNAL_TEST_ENDPOINTS_ENABLED: ${APP_INTERNAL_TEST_ENDPOINTS_ENABLED}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      STAFF_BOARD_TOKEN: ${STAFF_BOARD_TOKEN}
       # 실제 메일 발송(SMTP). 로컬 개발용 application-mail.yml과 동일한 값을 .env에 넣어 쓴다.
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT}
