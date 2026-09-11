@@ -22,6 +22,7 @@ import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -98,8 +99,13 @@ public class PotentialCustomerEmailService {
      * 이 시점부터는 potential_customer 행이 항상 조회 가능한 상태임이 보장된다.
      * fallbackExecution=true는 트랜잭션 없이 send()가 호출되는 예외적인 상황(예: 테스트)에서
      * 이벤트가 조용히 버려지지 않고 즉시 실행되도록 하는 안전장치다.
+     *
+     * <p>AFTER_COMMIT 시점엔 원래 트랜잭션이 이미 끝나 있어 합류할 트랜잭션이 없으므로,
+     * Spring이 @TransactionalEventListener 메서드에는 REQUIRES_NEW/NOT_SUPPORTED 외의
+     * propagation(클래스 레벨 기본값인 REQUIRED 포함)을 금지한다. 새 트랜잭션을 명시한다.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMailDispatchRequested(MailDispatchRequestedEvent event) {
         emailSender.send(event.pcId(), event.toAddress(), event.subject(), event.htmlBody());
     }
