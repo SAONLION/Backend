@@ -3,7 +3,7 @@ spring:
     name: mcmAI
 
   config:
-    import: optional:application-local.yaml, application-mail.yml
+    import: optional:application-local.yaml, optional:application-mail.yml
 
   datasource:
     username: ${DB_USERNAME}
