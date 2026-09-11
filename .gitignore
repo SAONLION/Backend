@@ -54,3 +54,5 @@ postman
 
 *.webp
 ubuntu@*
+
+application-mail.yml

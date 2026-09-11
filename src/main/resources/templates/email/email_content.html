@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<title>MCM — 고객님을 위한 컬렉션</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400&display=swap">
+</head>
+<body style="margin:0;padding:0;background-color:#141110;">
+
+<!-- 프리헤더 (메일 목록 미리보기) -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;height:0;width:0;font-size:1px;line-height:1px;">{{nickname}}님에게 맞춘 컬렉션이 도착했어요.</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;background-color:#141110;">
+<tr>
+<td align="center" style="padding:0;background-color:#141110;">
+
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" background="{{assetBaseUrl}}/bg-main.png" bgcolor="#141110" style="width:600px;border-collapse:collapse;background-color:#141110;background-image:url('{{assetBaseUrl}}/bg-main.png');background-repeat:no-repeat;background-position:top center;background-size:600px 2518px;">
+
+<!-- ============================================================
+     1. 헤더 — 로고 / 인사말 / 본문
+     ============================================================ -->
+<tr>
+<td align="center" style="padding:112px 0 0 0;font-size:0;line-height:0;">
+  <img src="{{assetBaseUrl}}/logo-mcm.png" width="152" height="95" alt="MCM" style="display:block;width:152px;height:95px;border:0;outline:none;text-decoration:none;">
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:20px 0 0 0;">
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:600;font-size:26px;line-height:39px;color:#ffffff;text-align:center;">안녕하세요, {{nickname}}님</p>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:6px 0 0 0;">
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:16px;line-height:24px;color:#b2b2b2;text-align:center;">고객님에게 맞춘 컬렉션이 도착했어요.</p>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:31px 0 0 0;">
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:16px;line-height:24px;color:#b2b2b2;text-align:center;">뭔가 줄글</p>
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:16px;line-height:24px;color:#b2b2b2;text-align:center;">파란 하늘 위로 훨훨 날아가겠죠<br>어려서 꿈꾸었던 비행기 타고<br>기다리는 동안 아무 말도 못 해요<br>내 생각 말할 순 없어요</p>
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:16px;line-height:24px;color:#b2b2b2;text-align:center;">모든 준비 다 끝났어 곱게 차려 입고 나선<br>바깥 풍경마저 들뜬 기분 때가 왔어<br>하늘 위로 날으는 순간이야 조금은 두려워도</p>
+</td>
+</tr>
+<tr>
+<td align="left" style="padding:48px 0 0 37px;">
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:600;font-size:18px;line-height:24.12px;color:#ffffff;text-align:left;">{{storeName}}에서<br>{{nickname}}님이 관심있게 본 제품</p>
+</td>
+</tr>
+<tr><td style="height:21px;line-height:21px;font-size:0;">&nbsp;</td></tr>
+
+<!-- ============================================================
+     2. 히어로 이미지 + PICK 카드
+     흰 카드가 사진 하단 밖으로 걸쳐 나오는 레이아웃이라
+     이 구간만 relative/absolute 로 구성합니다.
+     ============================================================ -->
+<tr>
+<td style="padding:0;font-size:0;line-height:0;">
+  <div style="position:relative;width:600px;height:894px;font-size:0;line-height:0;">
+
+    <img src="{{assetBaseUrl}}/store-hero.png" width="600" height="815" alt="{{storeName}}" style="display:block;width:600px;height:815px;border:0;outline:none;text-decoration:none;">
+
+    <div style="position:absolute;top:235px;left:0;width:617px;text-align:center;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:70px;line-height:105px;letter-spacing:-2.1px;color:#ffffff;">PICK</div>
+
+    <div style="position:absolute;top:331px;left:234px;width:334.5px;height:557px;box-sizing:border-box;background-color:#ffffff;border:1px solid #e1e1e1;box-shadow:4px 4px 6.3px rgba(231,231,231,0.36);">
+
+      <!-- PICK 1 -->
+      <img src="{{pickImageUrl1}}" width="149" height="161" alt="{{pickName1}}" style="position:absolute;top:-18px;left:2px;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+      <div style="position:absolute;top:37px;left:140px;width:171.4px;">
+        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName1}}</div>
+        <div style="padding-top:6.22px;font-size:0;line-height:0;">
+          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+        </div>
+      </div>
+      <div style="position:absolute;top:150px;left:34.5px;width:264.7px;height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
+
+      <!-- PICK 2 -->
+      <img src="{{pickImageUrl2}}" width="149" height="161" alt="{{pickName2}}" style="position:absolute;top:131px;left:12.4px;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+      <div style="position:absolute;top:186.6px;left:150.7px;width:171.4px;">
+        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName2}}</div>
+        <div style="padding-top:6.22px;font-size:0;line-height:0;">
+          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+        </div>
+      </div>
+      <div style="position:absolute;top:304px;left:34.5px;width:264.7px;height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
+
+      <!-- PICK 3 -->
+      <img src="{{pickImageUrl3}}" width="149" height="161" alt="{{pickName3}}" style="position:absolute;top:247.4px;left:12.4px;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+      <div style="position:absolute;top:328.3px;left:150.7px;width:171.4px;">
+        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName3}}</div>
+        <div style="padding-top:6.22px;font-size:0;line-height:0;">
+          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+        </div>
+      </div>
+      <div style="position:absolute;top:429.9px;left:34.5px;width:264.7px;height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
+
+      <!-- PICK 4 -->
+      <img src="{{pickImageUrl4}}" width="122" height="132" alt="{{pickName4}}" style="position:absolute;top:390.5px;left:26.3px;width:121.8px;height:131.9px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+      <div style="position:absolute;top:451.3px;left:150.7px;width:171.4px;">
+        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName4}}</div>
+        <div style="padding-top:6.22px;font-size:0;line-height:0;">
+          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</td>
+</tr>
+
+<!-- ============================================================
+     3. 추천 상품
+     ============================================================ -->
+<tr>
+<td align="left" style="padding:41px 0 0 37px;">
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:18px;line-height:27px;color:#ffffff;text-align:left;">{{nickname}}님을 위한 추천 상품</p>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:12px 0 0 0;">
+
+  <table role="presentation" width="501" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#231809" style="width:501px;border-collapse:separate;border-radius:14px;background-color:#231809;background-color:rgba(104,92,76,0.1);">
+  <tr>
+  <td align="center" style="padding:24px 0 0 0;">
+
+    <!-- 추천 상품 1 -->
+    <table role="presentation" width="444" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#413119" style="width:444px;border-collapse:separate;border-radius:15.4px;background-color:#413119;background-color:rgba(252,201,123,0.14);">
+    <tr>
+    <td align="center" style="padding:16px 0 0 0;font-size:0;line-height:0;">
+      <img src="{{recommendImageUrl1}}" width="299" height="186" alt="{{recommendName1}}" style="display:block;width:299px;height:186px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+    </td>
+    </tr>
+    <tr>
+    <td style="padding:0 0 0 28px;">
+      <table role="presentation" width="388" cellpadding="0" cellspacing="0" border="0" style="width:388px;border-collapse:collapse;">
+      <tr><td style="height:10px;line-height:10px;font-size:0;">&nbsp;</td></tr>
+      <tr>
+      <td align="left" style="padding:0;">
+        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:600;font-size:22px;line-height:33px;color:#ffffff;text-align:left;">{{recommendName1}}</p>
+        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:13px;line-height:15.99px;color:#b5b5b5;text-align:left;">사용한 어망을 혁신적으로 재생한 ECONYL&reg; 리사이클 나일론 소재로 제작된 이 스크런치는 클래식한 코드의 이중적인 매력을 담아냅니다.</p>
+      </td>
+      </tr>
+      <tr><td style="height:16px;line-height:16px;font-size:0;">&nbsp;</td></tr>
+      <tr>
+      <td align="center" bgcolor="#5f4a24" style="box-sizing:border-box;width:388px;height:38px;border-radius:10px;border:1px solid #7e642f;border-color:rgba(201,162,74,0.45);background-color:#5f4a24;background-color:rgba(201,162,74,0.22);">
+        <a href="#" style="display:block;width:386px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:15px;line-height:36px;color:#f0dca0;text-align:center;text-decoration:none;">자세히 보기</a>
+      </td>
+      </tr>
+      <tr><td style="height:23px;line-height:23px;font-size:0;">&nbsp;</td></tr>
+      </table>
+    </td>
+    </tr>
+    </table>
+
+  </td>
+  </tr>
+  <tr>
+  <td align="center" style="padding:12px 0 0 0;">
+
+    <!-- 추천 상품 2 -->
+    <table role="presentation" width="444" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#413119" style="width:444px;border-collapse:separate;border-radius:15.4px;background-color:#413119;background-color:rgba(252,201,123,0.14);">
+    <tr>
+    <td align="center" style="padding:16px 0 0 0;font-size:0;line-height:0;">
+      <img src="{{recommendImageUrl2}}" width="208" height="196" alt="{{recommendName2}}" style="display:block;width:208px;height:196px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+    </td>
+    </tr>
+    <tr>
+    <td style="padding:0 0 0 28px;">
+      <table role="presentation" width="388" cellpadding="0" cellspacing="0" border="0" style="width:388px;border-collapse:collapse;">
+      <tr><td style="height:10px;line-height:10px;font-size:0;">&nbsp;</td></tr>
+      <tr>
+      <td align="left" style="padding:0;">
+        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:600;font-size:22px;line-height:33px;color:#ffffff;text-align:left;">{{recommendName2}}</p>
+        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:13px;line-height:15.99px;color:#b5b5b5;text-align:left;">하우스의 시그니처 레터, 월계수, 다이아몬드 패턴으로 장식된 숄더백</p>
+      </td>
+      </tr>
+      <tr><td style="height:16px;line-height:16px;font-size:0;">&nbsp;</td></tr>
+      <tr>
+      <td align="center" bgcolor="#5f4a24" style="box-sizing:border-box;width:388px;height:38px;border-radius:10px;border:1px solid #7e642f;border-color:rgba(201,162,74,0.45);background-color:#5f4a24;background-color:rgba(201,162,74,0.22);">
+        <a href="#" style="display:block;width:386px;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:15px;line-height:36px;color:#f0dca0;text-align:center;text-decoration:none;">자세히 보기</a>
+      </td>
+      </tr>
+      <tr><td style="height:9px;line-height:9px;font-size:0;">&nbsp;</td></tr>
+      </table>
+    </td>
+    </tr>
+    </table>
+
+  </td>
+  </tr>
+  <tr><td style="height:21px;line-height:21px;font-size:0;">&nbsp;</td></tr>
+  </table>
+
+</td>
+</tr>
+
+<!-- ============================================================
+     4. 푸터
+     ============================================================ -->
+<tr>
+<td align="center" style="padding:42px 0 0 0;">
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:10.368px;line-height:13.48px;color:#bbbbbb;text-align:center;">You are receiving this email because you are subscribed to receive email promotions.</p>
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:10.368px;line-height:13.48px;color:#bbbbbb;text-align:center;"><a href="{{unsubscribeUrl}}" style="color:#bbbbbb;text-decoration:underline;">Unsubscribe</a> / <a href="{{privacyUrl}}" style="color:#bbbbbb;text-decoration:underline;">Privacy Policy</a></p>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:20px 0 45px 0;">
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:10.368px;line-height:13.48px;color:#bbbbbb;text-align:center;">MCM Products USA, Inc. &ndash; North America</p>
+  <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:10.368px;line-height:13.48px;color:#bbbbbb;text-align:center;">681 5th Avenue, New York, New York 10022</p>
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>

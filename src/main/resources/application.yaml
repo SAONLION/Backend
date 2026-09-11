@@ -3,7 +3,7 @@ spring:
     name: mcmAI
 
   config:
-    import: optional:application-local.yaml
+    import: optional:application-local.yaml, application-mail.yml
 
   datasource:
     username: ${DB_USERNAME}
@@ -34,6 +34,23 @@ app:
     token: ${STAFF_BOARD_TOKEN:}
   api:
     server-url: https://api.tagonai.site
+  email:
+    # smtp = application-mail.yml(git 미추적, .gitignore 등록됨)의 spring.mail.* 값으로 실제 발송.
+    # application-mail.yml이 없는 환경(그 파일 없이 받은 새 개발 환경 등)에서는 log로 바꿔 쓴다.
+    sender: ${EMAIL_SENDER:smtp}
+    template-path: classpath:templates/email/email_content.html
+    # 메일 클라이언트는 상대경로 이미지를 못 읽으므로 고정 이미지(로고/배경/매장 사진)는 절대 URL이어야 한다.
+    asset-base-url: ${EMAIL_ASSET_BASE_URL:https://api.tagonai.site/email}
+    placeholder-image-url: ${EMAIL_PLACEHOLDER_IMAGE_URL:https://api.tagonai.site/email/placeholder.png}
+    store-name: ${EMAIL_STORE_NAME:청담 MCM HAUS}
+    default-nickname: ${EMAIL_DEFAULT_NICKNAME:고객}
+    unsubscribe-url: ${EMAIL_UNSUBSCRIBE_URL:https://tagonai.site/unsubscribe}
+    privacy-url: ${EMAIL_PRIVACY_URL:https://tagonai.site/privacy}
+    # Gmail 등 대부분의 SMTP는 인증 계정과 다른 From으로 보내면 거부되거나 From이 강제로 바뀌므로,
+    # 따로 지정하지 않는 한 발신 주소는 SMTP 인증 계정(spring.mail.username)을 그대로 따른다.
+    from-address: ${EMAIL_FROM_ADDRESS:${spring.mail.username:no-reply@tagonai.site}}
+    subject-format: "%s님을 위한 MCM 컬렉션이 도착했어요"
+
 
 openai:
   base-url: https://api.openai.com/v1

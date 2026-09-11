@@ -23,7 +23,10 @@ public enum ErrorCode {
     INVALID_PURPOSE(HttpStatus.BAD_REQUEST, "허용되지 않은 방문 목적입니다."),
     INVALID_INTEREST_TYPE(HttpStatus.BAD_REQUEST, "허용되지 않은 관심 유형입니다."),
     MISSING_SESSION_ID(HttpStatus.BAD_REQUEST, "세션 ID를 입력해주세요."),
-    STAFF_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "직원 인증 토큰이 유효하지 않습니다.");
+    STAFF_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "직원 인증 토큰이 유효하지 않습니다."),
+    MARKETING_CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "마케팅 정보 수신에 동의해주세요."),
+    EMAIL_TEMPLATE_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "메일 템플릿을 읽을 수 없습니다."),
+    POTENTIAL_CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 발송 이력을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
