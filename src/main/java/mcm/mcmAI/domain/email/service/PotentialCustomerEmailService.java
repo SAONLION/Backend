@@ -2,6 +2,7 @@ package mcm.mcmAI.domain.email.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mcm.mcmAI.domain.email.dto.EmailContentResponse;
@@ -13,6 +14,7 @@ import mcm.mcmAI.domain.email.entity.PotentialCustomerProduct;
 import mcm.mcmAI.domain.email.event.MailDispatchRequestedEvent;
 import mcm.mcmAI.domain.email.repository.PotentialCustomerProductRepository;
 import mcm.mcmAI.domain.email.repository.PotentialCustomerRepository;
+import mcm.mcmAI.domain.email.type.SentStatus;
 import mcm.mcmAI.domain.email.type.SlotType;
 import mcm.mcmAI.domain.email.type.TriggerType;
 import mcm.mcmAI.domain.session.entity.Session;
@@ -69,6 +71,11 @@ public class PotentialCustomerEmailService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
         validate(request);
 
+        Optional<PotentialCustomer> alreadyDispatched = findAlreadyDispatched(sessionId);
+        if (alreadyDispatched.isPresent()) {
+            return buildResponse(alreadyDispatched.get());
+        }
+
         EmailContentResponse content = emailContentService.buildContent(sessionId);
 
         PotentialCustomer customer = potentialCustomerRepository.save(PotentialCustomer.builder()
@@ -114,9 +121,29 @@ public class PotentialCustomerEmailService {
     public EmailSendResponse getStatus(Long pcId) {
         PotentialCustomer customer = potentialCustomerRepository.findById(pcId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POTENTIAL_CUSTOMER_NOT_FOUND));
+        return buildResponse(customer);
+    }
 
-        List<PotentialCustomerProduct> slots =
-                potentialCustomerProductRepository.findByPotentialCustomer_PcIdOrderBySlotTypeAscSlotOrderAsc(pcId);
+    /**
+     * 프론트는 실패 시에만 재시도하지만, 그 재시도가 같은 세션에 대해 두 번째 /send로 들어올 수 있다.
+     * 이미 발송을 마쳤거나(SENT) 처리 중인(PENDING) 이력이 있으면 새 potential_customer 행을 만들거나
+     * 메일을 다시 트리거하지 않고, 그 기존 이력을 그대로 반환해 중복 발송을 막는다.
+     */
+    private Optional<PotentialCustomer> findAlreadyDispatched(String sessionId) {
+        if (potentialCustomerRepository.existsBySession_SessionIdAndSentStatus(sessionId, SentStatus.SENT)) {
+            return potentialCustomerRepository
+                    .findFirstBySession_SessionIdAndSentStatusOrderByPcIdDesc(sessionId, SentStatus.SENT);
+        }
+        if (potentialCustomerRepository.existsBySession_SessionIdAndSentStatus(sessionId, SentStatus.PENDING)) {
+            return potentialCustomerRepository
+                    .findFirstBySession_SessionIdAndSentStatusOrderByPcIdDesc(sessionId, SentStatus.PENDING);
+        }
+        return Optional.empty();
+    }
+
+    private EmailSendResponse buildResponse(PotentialCustomer customer) {
+        List<PotentialCustomerProduct> slots = potentialCustomerProductRepository
+                .findByPotentialCustomer_PcIdOrderBySlotTypeAscSlotOrderAsc(customer.getPcId());
         int filledPickCount = (int) slots.stream().filter(slot -> slot.getSlotType() == SlotType.PICK).count();
         int filledRecommendCount =
                 (int) slots.stream().filter(slot -> slot.getSlotType() == SlotType.RECOMMEND).count();
