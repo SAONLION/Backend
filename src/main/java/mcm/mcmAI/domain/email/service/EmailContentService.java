@@ -122,11 +122,29 @@ public class EmailContentService {
                     item.skuId(),
                     item.productId(),
                     item.productName(),
+                    resolveDescription(item.productId()),
                     item.imageUrl() != null ? item.imageUrl() : emailProperties.getPlaceholderImageUrl()
             ));
         }
 
         return padToSize(recommendations, SlotType.RECOMMEND, RECOMMEND_SLOT_COUNT);
+    }
+
+    /** {{recommendDescN}}에 들어갈 한 줄 설명. 소재 설명을 우선하고, 없으면 헤리티지 설명으로 대체한다. */
+    private String resolveDescription(Long productId) {
+        if (productId == null) {
+            return "";
+        }
+        return productRepository.findById(productId)
+                .map(this::resolveDescription)
+                .orElse("");
+    }
+
+    private String resolveDescription(Product product) {
+        if (product.getMaterialDesc() != null && !product.getMaterialDesc().isBlank()) {
+            return product.getMaterialDesc();
+        }
+        return product.getHeritageDesc() != null ? product.getHeritageDesc() : "";
     }
 
     private Optional<EmailSlotItem> toSlotItem(Long skuId, SlotType slotType, int slotOrder) {
@@ -149,6 +167,7 @@ public class EmailContentService {
                 sku.getSku(),
                 product.get().getProductId(),
                 product.get().getName(),
+                resolveDescription(product.get()),
                 resolveImageUrl(sku)
         ));
     }

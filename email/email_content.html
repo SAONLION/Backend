@@ -19,6 +19,7 @@
       추천 상품 (2칸)
       {{recommendImageUrl1..2}}  이미지 절대 URL
       {{recommendName1..2}}     상품명 (카드 제목 + alt 공용)
+      {{recommendDesc1..2}}     상품 설명 — 값이 없으면 빈 문자열로 치환할 것
 
       {{unsubscribeUrl}}    수신거부 링크
       {{privacyUrl}}        개인정보처리방침 링크
@@ -50,7 +51,7 @@
 <tr>
 <td align="center" style="padding:0;background-color:#141110;">
 
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" background="bg-main.png" bgcolor="#141110" style="width:600px;border-collapse:collapse;background-color:#141110;background-image:url('bg-main.png');background-repeat:no-repeat;background-position:top center;background-size:600px 2518px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" background="bg-main.png" bgcolor="#191106" style="width:600px;border-collapse:collapse;background-color:#191106;background-image:url('bg-main.png');background-repeat:no-repeat;background-position:top center;background-size:600px 100%;">
 
 <!-- ============================================================
      1. 헤더 — 로고 / 인사말 / 본문
@@ -91,55 +92,86 @@
      ============================================================ -->
 <tr>
 <td style="padding:0;font-size:0;line-height:0;">
-  <div style="position:relative;width:600px;height:894px;font-size:0;line-height:0;">
 
+  <!-- 매장 사진 + PICK 제목 -->
+  <div style="position:relative;width:600px;font-size:0;line-height:0;">
     <img src="store-hero.png" width="600" height="815" alt="청담 MCM HAUS" style="display:block;width:600px;height:815px;border:0;outline:none;text-decoration:none;">
-
     <div style="position:absolute;top:235px;left:0;width:617px;text-align:center;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:70px;line-height:105px;letter-spacing:-2.1px;color:#ffffff;">PICK</div>
-
-    <div style="position:absolute;top:331px;left:234px;width:334.5px;height:557px;box-sizing:border-box;background-color:#ffffff;border:1px solid #e1e1e1;box-shadow:4px 4px 6.3px rgba(231,231,231,0.36);">
-
-      <!-- PICK 1 -->
-      <img src="{{pickImageUrl1}}" width="149" height="161" alt="{{pickName1}}" style="position:absolute;top:-18px;left:2px;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
-      <div style="position:absolute;top:37px;left:140px;width:171.4px;">
-        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName1}}</div>
-        <div style="padding-top:6.22px;font-size:0;line-height:0;">
-          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
-        </div>
-      </div>
-      <div style="position:absolute;top:150px;left:34.5px;width:264.7px;height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
-
-      <!-- PICK 2 -->
-      <img src="{{pickImageUrl2}}" width="149" height="161" alt="{{pickName2}}" style="position:absolute;top:131px;left:12.4px;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
-      <div style="position:absolute;top:186.6px;left:150.7px;width:171.4px;">
-        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName2}}</div>
-        <div style="padding-top:6.22px;font-size:0;line-height:0;">
-          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
-        </div>
-      </div>
-      <div style="position:absolute;top:304px;left:34.5px;width:264.7px;height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
-
-      <!-- PICK 3 -->
-      <img src="{{pickImageUrl3}}" width="149" height="161" alt="{{pickName3}}" style="position:absolute;top:247.4px;left:12.4px;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
-      <div style="position:absolute;top:328.3px;left:150.7px;width:171.4px;">
-        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName3}}</div>
-        <div style="padding-top:6.22px;font-size:0;line-height:0;">
-          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
-        </div>
-      </div>
-      <div style="position:absolute;top:429.9px;left:34.5px;width:264.7px;height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
-
-      <!-- PICK 4 -->
-      <img src="{{pickImageUrl4}}" width="122" height="132" alt="{{pickName4}}" style="position:absolute;top:390.5px;left:26.3px;width:121.8px;height:131.9px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
-      <div style="position:absolute;top:451.3px;left:150.7px;width:171.4px;">
-        <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName4}}</div>
-        <div style="padding-top:6.22px;font-size:0;line-height:0;">
-          <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
-        </div>
-      </div>
-
-    </div>
   </div>
+
+  <!--
+    PICK 카드. 디자인상 사진 위로 겹쳐 올라가되 아래로는 사진 밖까지 내려온다.
+    예전에는 카드와 4개 행을 전부 절대좌표로 박아 뒀는데, 실제 상품명은 디자인에 쓰인
+    영문 예시보다 길고 상품 사진도 박스를 꽉 채워서 행끼리 겹쳐 보였다. 그래서 행은
+    표로 흘리고, 카드 전체를 음수 margin 으로 사진 위에 얹는다. 카드 높이가 내용에
+    따라 늘어나므로 상품명이 몇 줄이 되든 구분선·사진과 겹치지 않는다.
+    (margin-top -484px = 사진 높이 815 - 디자인상 카드 top 331)
+    position:relative 는 겹침 순서용이다. 사진 쪽 div 가 relative 라 이게 없으면 카드가 사진 뒤로 깔린다.
+  -->
+  <div style="position:relative;z-index:1;width:600px;font-size:0;line-height:0;">
+    <table role="presentation" width="334" cellpadding="0" cellspacing="0" border="0" style="width:334.5px;margin:-484px 0 0 234px;border-collapse:collapse;box-sizing:border-box;background-color:#ffffff;border:1px solid #e1e1e1;box-shadow:4px 4px 6.3px rgba(231,231,231,0.36);">
+      <tr>
+        <td valign="middle" width="149" style="width:149px;padding:8px 0;font-size:0;line-height:0;">
+          <img src="{{pickImageUrl1}}" width="149" height="161" alt="{{pickName1}}" style="display:block;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+        </td>
+        <td valign="middle" style="padding:8px 12px 8px 8px;">
+          <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName1}}</div>
+          <div style="padding-top:6.22px;font-size:0;line-height:0;">
+            <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:0 35px 0 34px;font-size:0;line-height:0;">
+          <div style="height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+      <tr>
+        <td valign="middle" width="149" style="width:149px;padding:8px 0;font-size:0;line-height:0;">
+          <img src="{{pickImageUrl2}}" width="149" height="161" alt="{{pickName2}}" style="display:block;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+        </td>
+        <td valign="middle" style="padding:8px 12px 8px 8px;">
+          <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName2}}</div>
+          <div style="padding-top:6.22px;font-size:0;line-height:0;">
+            <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:0 35px 0 34px;font-size:0;line-height:0;">
+          <div style="height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+      <tr>
+        <td valign="middle" width="149" style="width:149px;padding:8px 0;font-size:0;line-height:0;">
+          <img src="{{pickImageUrl3}}" width="149" height="161" alt="{{pickName3}}" style="display:block;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+        </td>
+        <td valign="middle" style="padding:8px 12px 8px 8px;">
+          <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName3}}</div>
+          <div style="padding-top:6.22px;font-size:0;line-height:0;">
+            <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:0 35px 0 34px;font-size:0;line-height:0;">
+          <div style="height:1px;background-color:#dbdbdb;font-size:0;line-height:0;">&nbsp;</div>
+        </td>
+      </tr>
+      <tr>
+        <td valign="middle" width="149" style="width:149px;padding:8px 0;font-size:0;line-height:0;">
+          <img src="{{pickImageUrl4}}" width="149" height="161" alt="{{pickName4}}" style="display:block;width:148.6px;height:161px;object-fit:cover;object-position:center;border:0;outline:none;text-decoration:none;">
+        </td>
+        <td valign="middle" style="padding:8px 12px 8px 8px;">
+          <div style="font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:16.59px;line-height:24.88px;letter-spacing:-0.995px;color:#000000;">{{pickName4}}</div>
+          <div style="padding-top:6.22px;font-size:0;line-height:0;">
+            <a href="#" style="font-family:'Crimson Text',Georgia,'Times New Roman',serif;font-weight:400;font-size:12.44px;line-height:18.66px;color:#000000;text-decoration:underline;">View Item</a>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
 </td>
 </tr>
 
@@ -172,7 +204,7 @@
       <tr>
       <td align="left" style="padding:0;">
         <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:600;font-size:22px;line-height:33px;color:#ffffff;text-align:left;">{{recommendName1}}</p>
-        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:13px;line-height:15.99px;color:#b5b5b5;text-align:left;">사용한 어망을 혁신적으로 재생한 ECONYL&reg; 리사이클 나일론 소재로 제작된 이 스크런치는 클래식한 코드의 이중적인 매력을 담아냅니다.</p>
+        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:13px;line-height:15.99px;color:#b5b5b5;text-align:left;">{{recommendDesc1}}</p>
       </td>
       </tr>
       <tr><td style="height:16px;line-height:16px;font-size:0;">&nbsp;</td></tr>
@@ -206,7 +238,7 @@
       <tr>
       <td align="left" style="padding:0;">
         <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:600;font-size:22px;line-height:33px;color:#ffffff;text-align:left;">{{recommendName2}}</p>
-        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:13px;line-height:15.99px;color:#b5b5b5;text-align:left;">하우스의 시그니처 레터, 월계수, 다이아몬드 패턴으로 장식된 숄더백</p>
+        <p style="margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:500;font-size:13px;line-height:15.99px;color:#b5b5b5;text-align:left;">{{recommendDesc2}}</p>
       </td>
       </tr>
       <tr><td style="height:16px;line-height:16px;font-size:0;">&nbsp;</td></tr>

@@ -62,6 +62,7 @@ public class EmailTemplateRenderer {
     private void putSlotTokens(Map<String, String> tokens, String prefix, List<EmailSlotItem> slots) {
         for (EmailSlotItem slot : slots) {
             tokens.put(prefix + "Name" + slot.slotOrder(), slot.productName());
+            tokens.put(prefix + "Desc" + slot.slotOrder(), slot.description());
             tokens.put(prefix + "ImageUrl" + slot.slotOrder(), slot.imageUrl());
         }
     }

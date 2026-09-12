@@ -23,6 +23,11 @@ public record EmailSlotItem(
                 example = "비세토스 백팩 M 코냑")
         String productName,
 
+        @Schema(description = "상품 설명. product.material_desc가 있으면 그 값을, 없으면 heritage_desc를 쓴다. "
+                + "템플릿의 {{recommendDescN}}에 들어간다. 빈 슬롯이거나 둘 다 없으면 빈 문자열이다.",
+                example = "사용한 어망을 혁신적으로 재생한 ECONYL® 리사이클 나일론 소재로 제작되었습니다.")
+        String description,
+
         @Schema(description = "이미지 절대 URL. 템플릿의 {{pickImageUrlN}}/{{recommendImageUrlN}}에 들어간다. "
                 + "등록된 이미지가 없거나 빈 슬롯이면 placeholder URL로 채워진다.",
                 example = "https://cdn.example.com/sku/1001/product-1.jpg")
@@ -30,7 +35,7 @@ public record EmailSlotItem(
 ) {
 
     public static EmailSlotItem empty(SlotType slotType, int slotOrder, String placeholderImageUrl) {
-        return new EmailSlotItem(slotType, slotOrder, null, null, "", placeholderImageUrl);
+        return new EmailSlotItem(slotType, slotOrder, null, null, "", "", placeholderImageUrl);
     }
 
     public boolean isFilled() {
