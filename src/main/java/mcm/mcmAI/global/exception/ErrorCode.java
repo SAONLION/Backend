@@ -26,7 +26,8 @@ public enum ErrorCode {
     STAFF_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "직원 인증 토큰이 유효하지 않습니다."),
     MARKETING_CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "마케팅 정보 수신에 동의해주세요."),
     EMAIL_TEMPLATE_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "메일 템플릿을 읽을 수 없습니다."),
-    POTENTIAL_CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 발송 이력을 찾을 수 없습니다.");
+    POTENTIAL_CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 발송 이력을 찾을 수 없습니다."),
+    EMAIL_SEND_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "세션당 발송 가능한 메일 횟수를 초과했습니다.");
 
     private final HttpStatus status;
     private final String message;

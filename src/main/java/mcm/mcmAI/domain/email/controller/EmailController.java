@@ -72,9 +72,11 @@ public class EmailController {
                     + "트리거되므로, 이 응답의 sentStatus는 실제 전송 결과와 무관하게 항상 PENDING이다. "
                     + "최종 성공/실패(SENT/FAILED)는 GET /status로 다시 조회해야 한다. 발송이 실패해도 "
                     + "요청 자체를 실패시키지 않고 이력만 FAILED로 남긴다(재시도·모니터링을 위함). "
-                    + "세션이 없으면 404(SESSION_NOT_FOUND), 이미 종료된 세션이면 409(SESSION_ALREADY_ENDED), "
-                    + "email이 비어 있으면 400(MISSING_CONTACT_INFO), 형식이 틀리면 400(INVALID_EMAIL), "
-                    + "마케팅 수신에 동의하지 않았으면 400(MARKETING_CONSENT_REQUIRED)을 반환한다."
+                    + "세션당 발송 가능 횟수는 최대 5회이며(FAILED는 횟수에서 제외), 초과하면 "
+                    + "429(EMAIL_SEND_LIMIT_EXCEEDED)를 반환한다. 세션이 없으면 404(SESSION_NOT_FOUND), "
+                    + "이미 종료된 세션이면 409(SESSION_ALREADY_ENDED), email이 비어 있으면 "
+                    + "400(MISSING_CONTACT_INFO), 형식이 틀리면 400(INVALID_EMAIL), 마케팅 수신에 동의하지 "
+                    + "않았으면 400(MARKETING_CONSENT_REQUIRED)을 반환한다."
     )
     @RequiresActiveSession
     @PostMapping("/send")

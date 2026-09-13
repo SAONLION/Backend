@@ -34,8 +34,13 @@ public class ContactController {
     @Operation(
             summary = "콘텐츠 수신 연락처 등록",
             description = "CB5/CB6 팝업에서 콘텐츠 수신에 동의한 고객의 이메일을 저장한다. MVP의 핵심 성과 지표인 "
-                    + "연락 가능한 접점(이메일) 확보를 위한 API다. 실제 SMTP 발송은 하지 않으며, 로그만 남기고 "
-                    + "contentSent=true, sentAt=현재시각으로 응답한다. actionId/productId/contentTopic은 "
+                    + "연락 가능한 접점(이메일) 확보를 위한 API로, 이 저장 자체는 항상 즉시 성공하며 응답은 "
+                    + "contentSent=true, sentAt=현재시각으로 내려간다. 실제 메일 발송은 이 요청이 커밋된 뒤 "
+                    + "PotentialCustomerEmailService의 기존 발송 파이프라인(추천 콘텐츠 렌더링 → EmailSender "
+                    + "비동기 발송, 세션당 최대 5회)을 그대로 태워 비동기로 트리거되므로, 이 응답의 "
+                    + "contentSent/sentAt은 실제 발송 성공 여부를 보장하지 않는다(발송 파이프라인이 실패해도, "
+                    + "혹은 세션당 발송 한도(5회)를 넘겨도 연락처 등록 자체는 실패하지 않는다 — 로그만 남는다). "
+                    + "actionId/productId/contentTopic은 "
                     + "선택값이다. 세션이 존재하지 않으면 404(SESSION_NOT_FOUND), email이 비어있으면 "
                     + "400(MISSING_CONTACT_INFO), email 형식이 올바르지 않으면 400(INVALID_EMAIL)을 반환한다."
     )
