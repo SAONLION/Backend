@@ -94,13 +94,37 @@ class StaffCallControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void sku가_없으면_400을_반환한다() throws Exception {
+    void sku가_없어도_reason만_있으면_호출이_생성된다() throws Exception {
         Session session = newSession();
 
         mockMvc.perform(post("/api/v1/session/staff-calls")
                         .param("sessionId", session.getSessionId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"가격 문의\"}"))
+                        .content("{\"reason\":\"기타 문의\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("requested"))
+                .andExpect(jsonPath("$.requestedAt").exists());
+
+        List<StaffCall> calls = staffCallRepository.findBySession_SessionId(session.getSessionId());
+        StaffCall call = calls.get(0);
+        org.assertj.core.api.Assertions.assertThat(call.getSku()).isNull();
+
+        mockMvc.perform(get("/api/v1/staff/staff-calls")
+                        .header(TOKEN_HEADER, STAFF_BOARD_TEST_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waiting[0].callId").value(call.getCallId()))
+                .andExpect(jsonPath("$.waiting[0].productName").doesNotExist())
+                .andExpect(jsonPath("$.waiting[0].color").doesNotExist());
+    }
+
+    @Test
+    void reason이_없으면_400을_반환한다() throws Exception {
+        Session session = newSession();
+
+        mockMvc.perform(post("/api/v1/session/staff-calls")
+                        .param("sessionId", session.getSessionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
                 .andExpect(status().isBadRequest());
     }
 

@@ -34,8 +34,11 @@ public class StaffCallService {
     public StaffCallResponse createStaffCall(String sessionId, StaffCallRequest request) {
         Session session = findSession(sessionId);
 
-        Sku sku = skuRepository.findBySkuAndIsDeletedFalse(request.sku())
-                .orElseThrow(() -> new BusinessException(ErrorCode.SKU_NOT_FOUND));
+        Sku sku = null;
+        if (request.sku() != null) {
+            sku = skuRepository.findBySkuAndIsDeletedFalse(request.sku())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.SKU_NOT_FOUND));
+        }
 
         StaffCall staffCall = StaffCall.builder()
                 .session(session)

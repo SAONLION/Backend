@@ -31,9 +31,10 @@ public class StaffCallController {
     @Operation(
             summary = "직원 호출 요청",
             description = "고객이 직원 호출을 요청한다. 고객 측 트리거만 담당한다. "
-                    + "모든 호출은 직전에 스캔/조회한 SKU와 연결되어야 하므로 sku 없이는 요청할 수 없다. 세션이 존재하지 "
-                    + "않으면 404(SESSION_NOT_FOUND), sku가 존재하지 않는 SKU이면 404(SKU_NOT_FOUND), "
-                    + "sku가 비어있으면 400을 반환한다."
+                    + "가격·재고·착장·구매 문의처럼 제품 문맥이 필요한 호출은 sku가 필수이며, 존재하지 않는 SKU이면 "
+                    + "404(SKU_NOT_FOUND)를 반환한다. 아직 제품을 태그하지 않은 일반 호출(예: 여권/태그 대기 화면)은 "
+                    + "sku를 생략할 수 있으며, 이 경우 400이나 SKU_NOT_FOUND를 반환하지 않는다. reason은 항상 필수이다. "
+                    + "세션이 존재하지 않으면 404(SESSION_NOT_FOUND)를 반환한다."
     )
     @RequiresActiveSession
     @PostMapping
