@@ -6,6 +6,7 @@ import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.sku.repository.SkuRepository;
+import mcm.mcmAI.domain.staffcall.service.StaffCallService;
 import mcm.mcmAI.domain.tryonrequest.dto.TryonRequestRequest;
 import mcm.mcmAI.domain.tryonrequest.dto.TryonRequestResponse;
 import mcm.mcmAI.domain.tryonrequest.entity.TryonRequest;
@@ -23,6 +24,7 @@ public class TryonRequestService {
     private final TryonRequestRepository tryonRequestRepository;
     private final SessionRepository sessionRepository;
     private final SkuRepository skuRepository;
+    private final StaffCallService staffCallService;
 
     @Transactional
     public TryonRequestResponse createTryonRequest(String sessionId, TryonRequestRequest request) {
@@ -38,8 +40,11 @@ public class TryonRequestService {
                 .size(sku.getSize())
                 .color(sku.getColor())
                 .build();
+        tryonRequestRepository.save(tryonRequest);
 
-        return TryonRequestResponse.from(tryonRequestRepository.save(tryonRequest));
+        staffCallService.createForTryonRequest(tryonRequest);
+
+        return TryonRequestResponse.from(tryonRequest);
     }
 
     @Transactional

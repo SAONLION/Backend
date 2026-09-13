@@ -2,20 +2,29 @@ package mcm.mcmAI.domain.pendingaction.controller;
 
 import mcm.mcmAI.support.AbstractIntegrationTest;
 
+import static mcm.mcmAI.global.security.StaffBoardTokenInterceptor.TOKEN_HEADER;
+import static mcm.mcmAI.support.AbstractIntegrationTest.STAFF_BOARD_TEST_TOKEN;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import mcm.mcmAI.domain.pendingaction.entity.PendingAction;
 import mcm.mcmAI.domain.pendingaction.entity.PendingActionOption;
 import mcm.mcmAI.domain.pendingaction.repository.PendingActionRepository;
 import mcm.mcmAI.domain.pendingaction.type.ActionNextStep;
 import mcm.mcmAI.domain.pendingaction.type.BlockerType;
 import mcm.mcmAI.domain.pendingaction.type.PendingActionStatus;
+import mcm.mcmAI.domain.product.entity.Product;
+import mcm.mcmAI.domain.product.repository.ProductRepository;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
+import mcm.mcmAI.domain.sku.entity.Sku;
+import mcm.mcmAI.domain.sku.repository.SkuRepository;
+import mcm.mcmAI.domain.staffcall.repository.StaffCallRepository;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +47,17 @@ class ActionControllerTest extends AbstractIntegrationTest {
 
     @Autowired
     private PendingActionRepository pendingActionRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private SkuRepository skuRepository;
+
+    @Autowired
+    private StaffCallRepository staffCallRepository;
+
+    private static final AtomicLong SKU_ID_SEQUENCE = new AtomicLong(990_000_000L);
 
     @Test
     void 옵션키로_응답하면_해당_옵션의_actionNextStep을_반환하고_상태가_RESPONDED로_바뀐다() throws Exception {
@@ -134,10 +154,143 @@ class ActionControllerTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code").value("INVALID_RESPONSE_KEY"));
     }
 
+    @Test
+    void CB3_escalate_call_응답시_직원_호출이_원자적으로_생성되고_SA_보드에_노출된다() throws Exception {
+        Session session = newSession();
+        Sku sku = newSku(newProduct());
+
+        PendingAction pendingAction = pendingActionRepository.save(PendingAction.builder()
+                .session(session)
+                .blockerType(BlockerType.CB3)
+                .sku(sku)
+                .popupTitle("직원에게 직접 안내를 받아보시겠어요?")
+                .options(List.of(
+                        new PendingActionOption("escalate_call", "네, 불러주세요", ActionNextStep.STAFF_CALL_CREATED, "우선 호출"),
+                        new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
+                ))
+                .build());
+
+        mockMvc.perform(post("/api/v1/actions/{actionId}/respond", pendingAction.getActionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(respondBody("escalate_call")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.actionNextStep").value("STAFF_CALL_CREATED"));
+
+        mockMvc.perform(get("/api/v1/staff/staff-calls")
+                        .header(TOKEN_HEADER, STAFF_BOARD_TEST_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waiting[0].reason").value("우선 호출"))
+                .andExpect(jsonPath("$.waiting[0].productName").value(sku.getProduct().getName()))
+                .andExpect(jsonPath("$.waiting[0].color").value(sku.getColor()));
+
+        Assertions.assertTrue(staffCallRepository.existsByPendingAction_ActionId(pendingAction.getActionId()));
+    }
+
+    @Test
+    void CB6_ask_staff_응답시_직원_호출이_생성되고_제품_문맥이_없으면_null로_내려간다() throws Exception {
+        Session session = newSession();
+
+        PendingAction pendingAction = pendingActionRepository.save(PendingAction.builder()
+                .session(session)
+                .blockerType(BlockerType.CB6)
+                .popupTitle("관심있던 제품에 대한 콘텐츠를 받아보시겠어요?")
+                .options(List.of(
+                        new PendingActionOption("ask_price", "가격이 궁금해요", ActionNextStep.SHOW_VALUE_CONTENT),
+                        new PendingActionOption("show_detail_reason", "콘텐츠 받을래요", ActionNextStep.CAPTURE_CONTACT),
+                        new PendingActionOption("ask_staff", "직원과 상담할래요", ActionNextStep.STAFF_CALL_CREATED, "직원 상담"),
+                        new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
+                ))
+                .build());
+
+        mockMvc.perform(post("/api/v1/actions/{actionId}/respond", pendingAction.getActionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(respondBody("ask_staff")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.actionNextStep").value("STAFF_CALL_CREATED"));
+
+        mockMvc.perform(get("/api/v1/staff/staff-calls")
+                        .header(TOKEN_HEADER, STAFF_BOARD_TEST_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waiting[0].reason").value("직원 상담"))
+                .andExpect(jsonPath("$.waiting[0].productName").doesNotExist())
+                .andExpect(jsonPath("$.waiting[0].color").doesNotExist());
+    }
+
+    @Test
+    void 동일_actionId로_재요청해도_직원_호출은_한_건만_생성된다() throws Exception {
+        Session session = newSession();
+
+        PendingAction pendingAction = pendingActionRepository.save(PendingAction.builder()
+                .session(session)
+                .blockerType(BlockerType.CB6)
+                .popupTitle("관심있던 제품에 대한 콘텐츠를 받아보시겠어요?")
+                .options(List.of(
+                        new PendingActionOption("ask_staff", "직원과 상담할래요", ActionNextStep.STAFF_CALL_CREATED, "직원 상담"),
+                        new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
+                ))
+                .build());
+
+        mockMvc.perform(post("/api/v1/actions/{actionId}/respond", pendingAction.getActionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(respondBody("ask_staff")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/actions/{actionId}/respond", pendingAction.getActionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(respondBody("ask_staff")))
+                .andExpect(status().isOk());
+
+        long staffCallCount = staffCallRepository.findBySession_SessionId(session.getSessionId()).size();
+        Assertions.assertEquals(1, staffCallCount);
+    }
+
+    @Test
+    void 콘텐츠_탐색_응답은_직원_호출을_생성하지_않는다() throws Exception {
+        Session session = newSession();
+
+        PendingAction pendingAction = pendingActionRepository.save(PendingAction.builder()
+                .session(session)
+                .blockerType(BlockerType.CB6)
+                .popupTitle("관심있던 제품에 대한 콘텐츠를 받아보시겠어요?")
+                .options(List.of(
+                        new PendingActionOption("show_detail_reason", "콘텐츠 받을래요", ActionNextStep.CAPTURE_CONTACT),
+                        new PendingActionOption("ask_staff", "직원과 상담할래요", ActionNextStep.STAFF_CALL_CREATED, "직원 상담"),
+                        new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
+                ))
+                .build());
+
+        mockMvc.perform(post("/api/v1/actions/{actionId}/respond", pendingAction.getActionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(respondBody("show_detail_reason")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.actionNextStep").value("CAPTURE_CONTACT"));
+
+        Assertions.assertTrue(staffCallRepository.findBySession_SessionId(session.getSessionId()).isEmpty());
+    }
+
     private Session newSession() {
         return sessionRepository.save(Session.builder()
                 .sessionId(UUID.randomUUID().toString())
                 .language("ko")
+                .build());
+    }
+
+    private Product newProduct() {
+        return productRepository.save(Product.builder()
+                .name("테스트 상품 " + UUID.randomUUID())
+                .category("bag")
+                .build());
+    }
+
+    private Sku newSku(Product product) {
+        return skuRepository.save(Sku.builder()
+                .sku(SKU_ID_SEQUENCE.incrementAndGet())
+                .product(product)
+                .color("Cognac")
+                .size("ONE")
+                .price(200_000)
+                .stockQty(5)
+                .styleNumber("TSTYLE" + SKU_ID_SEQUENCE.get())
                 .build());
     }
 

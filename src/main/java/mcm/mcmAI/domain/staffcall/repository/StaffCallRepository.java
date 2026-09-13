@@ -20,4 +20,10 @@ public interface StaffCallRepository extends JpaRepository<StaffCall, Long> {
     List<StaffCall> findByStatusNotOrderByRequestedAtAsc(StaffCallStatus status);
 
     List<StaffCall> findByStatusOrderByUpdatedAtDesc(StaffCallStatus status, Pageable pageable);
+
+    boolean existsByTryonRequest_TryonRequestId(Long tryonRequestId);
+
+    boolean existsByPurchaseInquiry_PurchaseInquiryId(Long purchaseInquiryId);
+
+    boolean existsByPendingAction_ActionId(Long actionId);
 }

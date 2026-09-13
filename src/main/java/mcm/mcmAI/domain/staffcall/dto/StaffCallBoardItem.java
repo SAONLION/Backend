@@ -23,6 +23,9 @@ public record StaffCallBoardItem(
         @Schema(description = "SKU 색상", example = "Cognac")
         String color,
 
+        @Schema(description = "착용 요청 시 선택한 사이즈. 착용 요청이 아닌 호출은 null", example = "S-M")
+        String size,
+
         @Schema(description = "호출 사유", example = "가격 문의")
         String reason,
 
@@ -45,6 +48,7 @@ public record StaffCallBoardItem(
                 staffCall.getSession().getNickname(),
                 sku != null ? sku.getProduct().getName() : null,
                 sku != null ? sku.getColor() : null,
+                staffCall.getSize(),
                 staffCall.getReason(),
                 staffCall.getStatus().name().toLowerCase(),
                 staffCall.getRequestedAt(),

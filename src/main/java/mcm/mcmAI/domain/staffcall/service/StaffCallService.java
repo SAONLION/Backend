@@ -3,6 +3,8 @@ package mcm.mcmAI.domain.staffcall.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import mcm.mcmAI.domain.pendingaction.entity.PendingAction;
+import mcm.mcmAI.domain.purchaseinquiry.entity.PurchaseInquiry;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
@@ -15,6 +17,7 @@ import mcm.mcmAI.domain.staffcall.dto.StaffCallStatusResponse;
 import mcm.mcmAI.domain.staffcall.entity.StaffCall;
 import mcm.mcmAI.domain.staffcall.repository.StaffCallRepository;
 import mcm.mcmAI.domain.staffcall.type.StaffCallStatus;
+import mcm.mcmAI.domain.tryonrequest.entity.TryonRequest;
 import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class StaffCallService {
+
+    private static final String TRYON_REQUEST_REASON = "착용 요청";
+    private static final String PURCHASE_INQUIRY_REASON = "구매 문의";
 
     private final StaffCallRepository staffCallRepository;
     private final SessionRepository sessionRepository;
@@ -47,6 +53,49 @@ public class StaffCallService {
                 .build();
 
         return StaffCallResponse.from(staffCallRepository.save(staffCall));
+    }
+
+    @Transactional
+    public void createForTryonRequest(TryonRequest tryonRequest) {
+        if (staffCallRepository.existsByTryonRequest_TryonRequestId(tryonRequest.getTryonRequestId())) {
+            return;
+        }
+
+        staffCallRepository.save(StaffCall.builder()
+                .session(tryonRequest.getSession())
+                .sku(tryonRequest.getSku())
+                .reason(TRYON_REQUEST_REASON)
+                .size(tryonRequest.getSize())
+                .tryonRequest(tryonRequest)
+                .build());
+    }
+
+    @Transactional
+    public void createForPurchaseInquiry(PurchaseInquiry purchaseInquiry) {
+        if (staffCallRepository.existsByPurchaseInquiry_PurchaseInquiryId(purchaseInquiry.getPurchaseInquiryId())) {
+            return;
+        }
+
+        staffCallRepository.save(StaffCall.builder()
+                .session(purchaseInquiry.getSession())
+                .sku(purchaseInquiry.getSku())
+                .reason(PURCHASE_INQUIRY_REASON)
+                .purchaseInquiry(purchaseInquiry)
+                .build());
+    }
+
+    @Transactional
+    public void createForPendingAction(PendingAction pendingAction, String reason) {
+        if (staffCallRepository.existsByPendingAction_ActionId(pendingAction.getActionId())) {
+            return;
+        }
+
+        staffCallRepository.save(StaffCall.builder()
+                .session(pendingAction.getSession())
+                .sku(pendingAction.getSku())
+                .reason(reason)
+                .pendingAction(pendingAction)
+                .build());
     }
 
     public StaffCallStatusResponse getStaffCall(String sessionId, Long callId) {

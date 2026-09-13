@@ -16,9 +16,12 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import mcm.mcmAI.domain.pendingaction.entity.PendingAction;
+import mcm.mcmAI.domain.purchaseinquiry.entity.PurchaseInquiry;
 import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.staffcall.type.StaffCallStatus;
+import mcm.mcmAI.domain.tryonrequest.entity.TryonRequest;
 import mcm.mcmAI.global.entity.BaseEntity;
 
 @Getter
@@ -43,6 +46,21 @@ public class StaffCall extends BaseEntity {
     @Column(name = "reason", length = 200, nullable = false)
     private String reason;
 
+    @Column(name = "size", length = 255)
+    private String size;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tryon_request_id")
+    private TryonRequest tryonRequest;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "purchase_inquiry_id")
+    private PurchaseInquiry purchaseInquiry;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pending_action_id")
+    private PendingAction pendingAction;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     private StaffCallStatus status;
@@ -51,10 +69,17 @@ public class StaffCall extends BaseEntity {
     private LocalDateTime requestedAt;
 
     @Builder
-    public StaffCall(Session session, Sku sku, String reason) {
+    public StaffCall(
+            Session session, Sku sku, String reason, String size,
+            TryonRequest tryonRequest, PurchaseInquiry purchaseInquiry, PendingAction pendingAction
+    ) {
         this.session = session;
         this.sku = sku;
         this.reason = reason;
+        this.size = size;
+        this.tryonRequest = tryonRequest;
+        this.purchaseInquiry = purchaseInquiry;
+        this.pendingAction = pendingAction;
         this.status = StaffCallStatus.REQUESTED;
         this.requestedAt = LocalDateTime.now();
     }

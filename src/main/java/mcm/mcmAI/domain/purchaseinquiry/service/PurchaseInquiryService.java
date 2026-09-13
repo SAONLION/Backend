@@ -9,6 +9,7 @@ import mcm.mcmAI.domain.session.entity.Session;
 import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.sku.repository.SkuRepository;
+import mcm.mcmAI.domain.staffcall.service.StaffCallService;
 import mcm.mcmAI.global.exception.BusinessException;
 import mcm.mcmAI.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class PurchaseInquiryService {
     private final PurchaseInquiryRepository purchaseInquiryRepository;
     private final SessionRepository sessionRepository;
     private final SkuRepository skuRepository;
+    private final StaffCallService staffCallService;
 
     @Transactional
     public PurchaseInquiryResponse createPurchaseInquiry(String sessionId, PurchaseInquiryRequest request) {
@@ -35,7 +37,10 @@ public class PurchaseInquiryService {
                 .session(session)
                 .sku(sku)
                 .build();
+        purchaseInquiryRepository.save(purchaseInquiry);
 
-        return PurchaseInquiryResponse.from(purchaseInquiryRepository.save(purchaseInquiry));
+        staffCallService.createForPurchaseInquiry(purchaseInquiry);
+
+        return PurchaseInquiryResponse.from(purchaseInquiry);
     }
 }

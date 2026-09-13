@@ -25,6 +25,7 @@ import mcm.mcmAI.domain.session.repository.SessionRepository;
 import mcm.mcmAI.domain.sku.entity.Sku;
 import mcm.mcmAI.domain.staffcall.entity.StaffCall;
 import mcm.mcmAI.domain.staffcall.repository.StaffCallRepository;
+import mcm.mcmAI.domain.staffcall.service.StaffCallService;
 import mcm.mcmAI.domain.staffcall.type.StaffCallStatus;
 import mcm.mcmAI.domain.tagscanlog.entity.TagScanLog;
 import mcm.mcmAI.domain.tagscanlog.repository.TagScanLogRepository;
@@ -47,8 +48,9 @@ public class PendingActionService {
     private static final long CB3_UNANSWERED_THRESHOLD_MINUTES = 5;
     private static final String CB3_POPUP_TITLE = "직원에게 직접 안내를\n받아보시겠어요?";
     private static final String CB3_POPUP_BODY = null;
+    private static final String CB3_ESCALATE_STAFF_CALL_REASON = "우선 호출";
     private static final List<PendingActionOption> CB3_OPTIONS = List.of(
-            new PendingActionOption("escalate_call", "네, 불러주세요", ActionNextStep.STAFF_CALL_CREATED),
+            new PendingActionOption("escalate_call", "네, 불러주세요", ActionNextStep.STAFF_CALL_CREATED, CB3_ESCALATE_STAFF_CALL_REASON),
             new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
     );
     private static final String TRIGGER_ID_CB3_1 = "T-CB3-1";
@@ -92,6 +94,15 @@ public class PendingActionService {
             new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
     );
 
+    // CB6는 F23-1 통합 화면에 '직원 상담' 선택지가 추가된 옵션 세트를 쓴다 (CB5는 기존 F23_1_OPTIONS 유지)
+    private static final String CB6_ASK_STAFF_STAFF_CALL_REASON = "직원 상담";
+    private static final List<PendingActionOption> CB6_OPTIONS = List.of(
+            new PendingActionOption("ask_price", "가격이 궁금해요", ActionNextStep.SHOW_VALUE_CONTENT),
+            new PendingActionOption("show_detail_reason", "콘텐츠 받을래요", ActionNextStep.CAPTURE_CONTACT),
+            new PendingActionOption("ask_staff", "직원과 상담할래요", ActionNextStep.STAFF_CALL_CREATED, CB6_ASK_STAFF_STAFF_CALL_REASON),
+            new PendingActionOption("dismissed", "괜찮아요", ActionNextStep.NONE)
+    );
+
     private static String buildF23_1PopupTitle(Product product) {
         String productName = (product != null && product.getName() != null)
                 ? product.getName()
@@ -102,6 +113,7 @@ public class PendingActionService {
     private final PendingActionRepository pendingActionRepository;
     private final SessionRepository sessionRepository;
     private final StaffCallRepository staffCallRepository;
+    private final StaffCallService staffCallService;
     private final TagScanLogRepository tagScanLogRepository;
     private final InteractionLogRepository interactionLogRepository;
     private final PurchaseInquiryRepository purchaseInquiryRepository;
@@ -150,7 +162,7 @@ public class PendingActionService {
 
             Product product = staffCall.getSku() != null ? staffCall.getSku().getProduct() : null;
             saveBlocker(
-                    session, BlockerType.CB3, product, staffCall, null, null, TRIGGER_ID_CB3_1, TIER_CB3_1,
+                    session, BlockerType.CB3, product, staffCall.getSku(), staffCall, null, null, TRIGGER_ID_CB3_1, TIER_CB3_1,
                     CB3_POPUP_TITLE, CB3_POPUP_BODY, CB3_OPTIONS
             );
         }
@@ -277,8 +289,8 @@ public class PendingActionService {
             }
 
             saveBlocker(
-                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_A, TIER_CB6_A,
-                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, F23_1_OPTIONS
+                    session, BlockerType.CB6, product, tryon.getSku(), null, null, null, TRIGGER_ID_CB6_A, TIER_CB6_A,
+                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, CB6_OPTIONS
             );
         }
     }
@@ -360,8 +372,8 @@ public class PendingActionService {
             }
 
             saveBlocker(
-                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_B, TIER_CB6_B,
-                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, F23_1_OPTIONS
+                    session, BlockerType.CB6, product, sku, null, null, null, TRIGGER_ID_CB6_B, TIER_CB6_B,
+                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, CB6_OPTIONS
             );
         }
     }
@@ -407,8 +419,8 @@ public class PendingActionService {
             }
 
             saveBlocker(
-                    session, BlockerType.CB6, product, null, null, null, TRIGGER_ID_CB6_C, TIER_CB6_C,
-                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, F23_1_OPTIONS
+                    session, BlockerType.CB6, product, call.getSku(), null, null, null, TRIGGER_ID_CB6_C, TIER_CB6_C,
+                    buildF23_1PopupTitle(product), CB6_POPUP_BODY, CB6_OPTIONS
             );
         }
     }
@@ -464,7 +476,20 @@ public class PendingActionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ACTION_NOT_FOUND));
 
         String responseKey = request.responseKey();
-        ActionNextStep nextStep = resolveNextStep(pendingAction, responseKey);
+        ActionNextStep nextStep;
+
+        if (DISMISSED_RESPONSE_KEY.equals(responseKey)) {
+            nextStep = ActionNextStep.NONE;
+        } else {
+            PendingActionOption option = pendingAction.findOption(responseKey)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_RESPONSE_KEY));
+            nextStep = option.actionNextStep();
+
+            if (nextStep == ActionNextStep.STAFF_CALL_CREATED) {
+                String reason = option.staffCallReason() != null ? option.staffCallReason() : option.label();
+                staffCallService.createForPendingAction(pendingAction, reason);
+            }
+        }
 
         pendingAction.respond(responseKey);
 
@@ -473,16 +498,6 @@ public class PendingActionService {
                 : null;
 
         return RespondResponseDTO.of(pendingAction.getActionId(), responseKey, nextStep, result);
-    }
-
-    private ActionNextStep resolveNextStep(PendingAction pendingAction, String responseKey) {
-        if (DISMISSED_RESPONSE_KEY.equals(responseKey)) {
-            return ActionNextStep.NONE;
-        }
-
-        return pendingAction.findOption(responseKey)
-                .map(PendingActionOption::actionNextStep)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_RESPONSE_KEY));
     }
 
     @Transactional
@@ -498,8 +513,9 @@ public class PendingActionService {
             Session session, BlockerType blockerType, Product product, StaffCall staffCall,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
+        Sku sku = staffCall != null ? staffCall.getSku() : null;
         return saveBlocker(
-                session, blockerType, product, staffCall, null, null, null,null,
+                session, blockerType, product, sku, staffCall, null, null, null,null,
                 popupTitle, popupBody, options
         );
     }
@@ -509,8 +525,9 @@ public class PendingActionService {
             Session session, Product product, TagScanLog triggerTagScanLog, String triggerId,Integer tier,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
+        Sku sku = triggerTagScanLog != null ? triggerTagScanLog.getSku() : null;
         return saveBlocker(
-                session, BlockerType.CB5, product, null, triggerTagScanLog,null, triggerId,tier,
+                session, BlockerType.CB5, product, sku, null, triggerTagScanLog,null, triggerId,tier,
                 popupTitle, popupBody, options
         );
     }
@@ -520,14 +537,15 @@ public class PendingActionService {
             Session session, Product product, InteractionLog triggerInteractionLog, String triggerId,Integer tier,
             String popupTitle, String popupBody, List<PendingActionOption> options
     ) {
+        Sku sku = triggerInteractionLog != null ? triggerInteractionLog.getSku() : null;
         return saveBlocker(
-                session, BlockerType.CB5, product, null, null, triggerInteractionLog, triggerId, tier,
+                session, BlockerType.CB5, product, sku, null, null, triggerInteractionLog, triggerId, tier,
                 popupTitle, popupBody, options
         );
     }
 
     private PendingAction saveBlocker(
-            Session session, BlockerType blockerType, Product product, StaffCall staffCall,
+            Session session, BlockerType blockerType, Product product, Sku sku, StaffCall staffCall,
             TagScanLog triggerTagScanLog, InteractionLog triggerInteractionLog, String triggerId,
             Integer tier,
             String popupTitle, String popupBody, List<PendingActionOption> options
@@ -536,6 +554,7 @@ public class PendingActionService {
                 .session(session)
                 .blockerType(blockerType)
                 .product(product)
+                .sku(sku)
                 .staffCall(staffCall)
                 .triggerTagScanLog(triggerTagScanLog)
                 .triggerInteractionLog(triggerInteractionLog)

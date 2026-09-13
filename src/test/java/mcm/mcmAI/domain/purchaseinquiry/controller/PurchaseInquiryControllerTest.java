@@ -2,10 +2,15 @@ package mcm.mcmAI.domain.purchaseinquiry.controller;
 
 import mcm.mcmAI.support.AbstractIntegrationTest;
 
+import static mcm.mcmAI.global.security.StaffBoardTokenInterceptor.TOKEN_HEADER;
+import static mcm.mcmAI.support.AbstractIntegrationTest.STAFF_BOARD_TEST_TOKEN;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import mcm.mcmAI.domain.product.entity.Product;
@@ -77,6 +82,36 @@ class PurchaseInquiryControllerTest extends AbstractIntegrationTest {
                         .content("{\"sku\": 1}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("SESSION_NOT_FOUND"));
+    }
+
+    @Test
+    void 구매_문의와_연결된_직원_호출이_SA_보드에_노출되고_완료처리된다() throws Exception {
+        Session session = newSession();
+        Sku sku = newSku(newProduct());
+
+        String requestBody = """
+                {"sku": %d}
+                """.formatted(sku.getSku());
+
+        mockMvc.perform(post("/api/v1/sessions/{sessionId}/purchase-inquiries", session.getSessionId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        String boardResponse = mockMvc.perform(get("/api/v1/staff/staff-calls")
+                        .header(TOKEN_HEADER, STAFF_BOARD_TEST_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waiting[0].reason").value("구매 문의"))
+                .andExpect(jsonPath("$.waiting[0].productName").value(sku.getProduct().getName()))
+                .andExpect(jsonPath("$.waiting[0].color").value(sku.getColor()))
+                .andExpect(jsonPath("$.waiting[0].size").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        Number callId = JsonPath.read(boardResponse, "$.waiting[0].callId");
+
+        mockMvc.perform(patch("/api/v1/staff/staff-calls/{callId}/complete", callId.longValue())
+                        .header(TOKEN_HEADER, STAFF_BOARD_TEST_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("completed"));
     }
 
     private Session newSession() {
